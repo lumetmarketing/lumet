@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Lumet Marketing — Sistema Interno</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --brown-dark:#3D1F00;--brown-mid:#6B3A1F;--brown:#8B5A2B;
+  --brown-light:#C8956C;--brown-pale:#E8C9A8;
+  --cream:#FDF6EE;--cream2:#F5E6D3;--cream3:#EDD9C0;
+  --white:#FFFFFF;--dark:#2C1500;--gray:#7A6555;
+  --gray-light:#FAF3EC;--gray-mid:#E5D5C5;
+  --green:#2D7A3A;--green-light:#D4EDDA;
+  --red:#B91C1C;--red-light:#FEE2E2;
+  --blue:#1D5FA8;--blue-light:#DBEAFE;
+  --amber:#92600A;--amber-light:#FEF3C7;
+  --radius:10px;--radius-lg:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+body{background:var(--cream);color:var(--dark);min-height:100vh}
+button{cursor:pointer;border:none;background:none;font-family:inherit}
+input,textarea,select{font-family:inherit;border:1.5px solid var(--gray-mid);border-radius:var(--radius);padding:10px 14px;font-size:14px;width:100%;outline:none;transition:border .2s;background:var(--white)}
+input:focus,textarea:focus,select:focus{border-color:var(--brown)}
+textarea{resize:vertical;min-height:80px}
+.btn{padding:10px 20px;border-radius:var(--radius);font-size:14px;font-weight:500;transition:all .2s;display:inline-flex;align-items:center;gap:8px}
+.btn-primary{background:var(--brown-dark);color:#fff;box-shadow:0 1px 4px rgba(61,31,0,.15)}.btn-primary:hover{background:var(--brown-mid);box-shadow:0 4px 12px rgba(61,31,0,.2);transform:translateY(-1px)}.btn-primary:active{transform:translateY(0)}
+.btn-outline{border:1.5px solid var(--gray-mid);color:var(--gray)}.btn-outline:hover{border-color:var(--brown);color:var(--brown)}
+.btn-sm{padding:6px 14px;font-size:13px}
+.btn-danger{background:var(--red);color:#fff}
+.btn-success{background:var(--green);color:#fff}
+.card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-mid);padding:22px;box-shadow:0 1px 4px rgba(61,31,0,.06);transition:box-shadow .2s}.card:hover{box-shadow:0 4px 16px rgba(61,31,0,.1)}
+.modal-overlay{position:fixed;inset:0;background:rgba(26,10,0,.6);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;backdrop-filter:blur(3px)}
+.modal{background:var(--white);border-radius:20px;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(61,31,0,.2)}
+.modal-header{padding:20px 24px;border-bottom:1px solid var(--gray-mid);display:flex;justify-content:space-between;align-items:center;background:var(--cream)}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--gray-mid);display:flex;gap:12px;justify-content:flex-end;background:var(--cream)}
+.sidebar{width:232px;background:var(--brown-dark);min-height:100vh;padding:20px 0;position:fixed;left:0;top:0;z-index:100;display:flex;flex-direction:column;box-shadow:4px 0 20px rgba(0,0,0,.15)}
+.sidebar-logo{padding:16px 20px 24px;color:#fff;font-size:18px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.12)}
+.sidebar-logo span{color:var(--brown-pale);font-size:11px;display:block;font-weight:400;margin-top:2px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:12px 20px;color:rgba(255,255,255,.7);font-size:14px;cursor:pointer;transition:all .2s;border-left:3px solid transparent}
+.nav-item:hover,.nav-item.active{background:rgba(255,255,255,.1);color:#fff;border-left-color:var(--brown-light)}
+.nav-icon{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:0}.nav-item.active .nav-icon{background:var(--brown-light);color:var(--brown-dark)}.nav-section-lbl{padding:14px 20px 4px;font-size:10px;font-weight:600;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase}
+.main{margin-left:232px;padding:32px;min-height:100vh}
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.page-title{font-size:24px;font-weight:700;color:var(--dark)}
+.page-sub{font-size:14px;color:var(--gray);margin-top:2px}
+.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.stat-card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-mid);padding:22px;cursor:pointer;transition:all .2s;border-top:3px solid var(--brown-light);box-shadow:0 1px 3px rgba(61,31,0,.06)}
+.stat-card:hover{transform:translateY(-2px)}
+.stat-val{font-size:32px;font-weight:700;color:var(--brown-dark)}
+.stat-lbl{font-size:13px;color:var(--gray);margin-top:4px}
+.kanban-board{display:grid;grid-template-columns:repeat(5,minmax(200px,1fr));gap:14px;overflow-x:auto;padding-bottom:16px}
+.kanban-col{background:var(--cream2);border-radius:var(--radius-lg);padding:14px;min-height:400px}
+.kanban-col-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.kanban-col-title{font-size:13px;font-weight:600}
+.kanban-col-count{background:var(--gray-mid);border-radius:20px;padding:2px 8px;font-size:12px;color:var(--gray)}
+.kanban-card{background:var(--white);border-radius:var(--radius);border:1px solid var(--gray-mid);padding:13px;margin-bottom:10px;cursor:grab;transition:all .18s;border-left:3px solid var(--brown);box-shadow:0 1px 3px rgba(61,31,0,.05)}
+.kanban-card:hover{box-shadow:0 4px 14px rgba(61,31,0,.12);transform:translateY(-2px)}
+.kanban-card-img{width:100%;height:80px;object-fit:cover;border-radius:6px;margin-bottom:8px}
+.checklist-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-mid)}
+.checklist-item:last-child{border-bottom:none}
+.checklist-check{width:18px;height:18px;border-radius:4px;border:2px solid var(--gray-mid);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.checklist-check.done{background:var(--green);border-color:var(--green);color:#fff}
+.func-card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-mid);padding:22px;box-shadow:0 1px 3px rgba(61,31,0,.06)}
+.func-avatar{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--brown),var(--brown-light));color:#fff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(61,31,0,.2)}
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;background:var(--cream2);color:var(--brown-mid)}
+.client-card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-mid);padding:22px;cursor:pointer;transition:all .2s;border-top:4px solid var(--brown);box-shadow:0 1px 3px rgba(61,31,0,.06)}
+.client-card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(61,31,0,.12)}
+.tabs{display:flex;gap:4px;background:var(--gray-mid);padding:4px;border-radius:var(--radius);margin-bottom:20px;flex-wrap:wrap}
+.tab{flex:1;padding:8px;border-radius:7px;font-size:13px;font-weight:500;text-align:center;cursor:pointer;color:var(--gray);transition:all .2s;min-width:80px}
+.tab.active{background:var(--white);color:var(--brown-dark);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.section-title{font-size:16px;font-weight:600;color:var(--dark);margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid var(--cream3)}
+.editable-field{cursor:pointer;padding:12px;border-radius:var(--radius);border:1.5px dashed transparent;transition:all .2s;min-height:48px;line-height:1.7;font-size:14px;color:var(--dark);white-space:pre-wrap}
+.editable-field:hover{border-color:var(--brown-light);background:var(--cream)}
+.editable-field.empty{color:var(--gray);font-style:italic}
+.info-box{background:var(--cream2);border-radius:var(--radius);padding:14px;border-left:4px solid var(--brown-light)}
+.arquetipo-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:var(--cream3);color:var(--brown-dark);margin:4px}
+.arquetipo-sel{background:var(--brown-dark);color:#fff}
+.notif-panel{background:var(--white);border-radius:12px;margin:8px 12px;padding:12px;max-height:320px;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.15)}
+.upload-area{border:2px dashed var(--gray-mid);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--gray-light)}
+.upload-area:hover{border-color:var(--brown);background:var(--cream2)}
+.pdf-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--cream2);border-radius:var(--radius);margin-bottom:8px}
+.aprova-page{min-height:100vh;background:linear-gradient(135deg,#3D1F00 0%,#6B3A1F 100%);display:flex;align-items:center;justify-content:center;padding:24px}
+.aprova-card{background:#fff;border-radius:24px;max-width:480px;width:100%;overflow:hidden}
+.aprova-header{background:var(--brown-dark);padding:24px;text-align:center}
+.aprova-btns{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}
+.aprova-btn{padding:16px;border-radius:var(--radius-lg);font-size:18px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:8px;transition:all .2s;cursor:pointer;border:none}
+.aprova-btn-sim{background:var(--green-light);color:var(--green)}.aprova-btn-sim:hover{background:var(--green);color:#fff}
+.aprova-btn-nao{background:var(--red-light);color:var(--red)}.aprova-btn-nao:hover{background:var(--red);color:#fff}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}.fade-in{animation:fadeIn .22s ease forwards}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--gray-mid);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--brown-light)}@media(max-width:768px){
+  .sidebar{width:100%;min-height:auto;position:relative;flex-direction:row;flex-wrap:wrap;padding:8px}
+  .sidebar-logo{padding:8px 12px;font-size:14px;border-bottom:none}
+  .nav-item{padding:8px 10px;font-size:11px;border-left:none;border-bottom:3px solid transparent}
+  .nav-item.active{border-left:none;border-bottom-color:var(--brown-light)}
+  .main{margin-left:0;padding:16px}
+  .kanban-board{grid-template-columns:repeat(5,minmax(160px,1fr))}
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { createClient } = supabase;
+const SUPA_URL='https://akmtklfrzbvhniapqbuu.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrbXRrbGZyemJ2aG5pYXBxYnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMzcyOTgsImV4cCI6MjA5MjkxMzI5OH0.OgbD7-MoOTIp-_1flsXgNXm_Bp59pKSVmGnxMQMq6WQ';
+const sb=createClient(SUPA_URL,SUPA_KEY);
+const {useState,useEffect,useRef}=React;
+
+const SEGMENTOS=['seguros','odontologia','educação','beleza','alimentação','fitness','pet','juridico','imobiliario','varejo','chef de cozinha','buffet','energia solar','agente de viagens','médico','contadora','gestora de RH','reciclagem e meio ambiente','restaurante','rastreamento de veículos','social media','outro'];
+
+const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+const ARQUETIPOS={
+  'O Herói':{emoji:'⚔️',desc:'Corajoso, determinado e inspirador. A marca Herói supera desafios e motiva as pessoas a serem melhores. Combate o mal e protege os mais fracos. Mensagem central: "Onde há vontade, há um caminho."'},
+  'O Sábio':{emoji:'🦉',desc:'Inteligente, especialista e confiável. A marca Sábia compartilha conhecimento e ajuda as pessoas a entenderem o mundo. Valoriza a verdade acima de tudo. Mensagem central: "O conhecimento liberta."'},
+  'O Explorador':{emoji:'🧭',desc:'Aventureiro, livre e autêntico. A marca Exploradora incentiva descobertas e novas experiências. Rejeita a conformidade e busca autenticidade. Mensagem central: "Não se limite — explore."'},
+  'O Criador':{emoji:'🎨',desc:'Inovador, artístico e visionário. A marca Criadora expressa originalidade e ajuda outros a criarem. Transforma ideias em realidade. Mensagem central: "Se você pode imaginar, pode criar."'},
+  'O Governante':{emoji:'👑',desc:'Líder, responsável e organizador. A marca Governante transmite autoridade, controle e excelência. Cria ordem e garante qualidade. Mensagem central: "Poder não é tudo — é o único."'},
+  'O Prestativo':{emoji:'🤝',desc:'Generoso, cuidadoso e empático. A marca Prestativa existe para servir e ajudar os outros. Coloca as necessidades dos clientes em primeiro lugar. Mensagem central: "Amar ao próximo como a si mesmo."'},
+  'O Amante':{emoji:'❤️',desc:'Apaixonado, sensual e relacional. A marca Amante cria conexões profundas e experiências inesquecíveis. Valoriza beleza, prazer e relacionamentos. Mensagem central: "Só você me faz sentir especial."'},
+  'O Bobo da Corte':{emoji:'🃏',desc:'Divertido, irreverente e espontâneo. A marca Bobo da Corte traz leveza e alegria. Usa humor para conectar e não leva a vida muito a sério. Mensagem central: "Se você não está se divertindo, está fazendo errado."'},
+  'O Homem Comum':{emoji:'🙋',desc:'Autêntico, humilde e próximo das pessoas. A marca Homem Comum é acessível e não se diferencia artificialmente. Pertence ao povo. Mensagem central: "Todos são iguais e merecem o mesmo."'},
+  'O Inocente':{emoji:'🌟',desc:'Otimista, puro e positivo. A marca Inocente acredita no bem e transmite felicidade e simplicidade. Evita conflitos e promove harmonia. Mensagem central: "A vida é boa e tudo vai dar certo."'},
+  'O Fora da Lei':{emoji:'🔥',desc:'Revolucionário, rebelde e disruptivo. A marca Fora da Lei questiona o status quo e desafia convenções. Fala para quem não se encaixa no sistema. Mensagem central: "As regras existem para ser quebradas."'},
+  'O Mago':{emoji:'✨',desc:'Visionário, transformador e carismático. A marca Maga transforma sonhos em realidade e cria experiências extraordinárias. Conhece os segredos do universo. Mensagem central: "Faça seus sonhos se tornarem realidade."'},
+};
+
+const DATAS_SEGMENTO={
+  'seguros':[{t:'Dia do Corretor de Seguros',d:'10-06'},{t:'Dia do Consumidor',d:'03-15'},{t:'Dia Mundial da Saúde',d:'04-07'}],
+  'odontologia':[{t:'Dia do Dentista',d:'10-25'},{t:'Dia Mundial da Saúde',d:'04-07'},{t:'Dia Mundial da Higiene Bucal',d:'03-20'}],
+  'educação':[{t:'Dia do Professor',d:'10-15'},{t:'Dia do Estudante',d:'08-11'},{t:'Volta às Aulas',d:'02-01'}],
+  'beleza':[{t:'Dia Internacional da Mulher',d:'03-08'},{t:'Dia da Beleza',d:'09-07'},{t:'Dia do Cabeleireiro',d:'10-08'}],
+  'alimentação':[{t:'Dia do Chocolate',d:'07-07'},{t:'Dia da Pizza',d:'07-10'},{t:'Dia do Sorvete',d:'09-23'}],
+  'fitness':[{t:'Dia Mundial da Saúde',d:'04-07'},{t:'Dia do Atleta',d:'07-19'}],
+  'pet':[{t:'Dia Mundial dos Animais',d:'10-04'},{t:'Dia do Cão',d:'07-15'},{t:'Dia do Gato',d:'02-17'}],
+  'juridico':[{t:'Dia do Advogado',d:'08-11'},{t:'Dia da Justiça',d:'12-08'}],
+  'imobiliario':[{t:'Dia do Corretor de Imóveis',d:'08-27'},{t:'Dia do Inquilino',d:'10-26'}],
+  'varejo':[{t:'Dia do Consumidor',d:'03-15'},{t:'Volta às Aulas',d:'02-01'}],
+  'chef de cozinha':[{t:'Dia do Chef',d:'10-20'},{t:'Dia da Pizza',d:'07-10'}],
+  'buffet':[{t:'Dia das Mães',d:'05-11'},{t:'Dia dos Pais',d:'08-10'}],
+  'energia solar':[{t:'Dia do Meio Ambiente',d:'06-05'},{t:'Dia da Terra',d:'04-22'}],
+  'agente de viagens':[{t:'Dia do Turismo',d:'09-27'},{t:'Dia Mundial da Aviação',d:'12-07'}],
+  'médico':[{t:'Dia do Médico',d:'10-18'},{t:'Dia Mundial da Saúde',d:'04-07'}],
+  'contadora':[{t:'Dia do Contador',d:'04-22'},{t:'Dia do Imposto de Renda',d:'04-30'}],
+  'gestora de rh':[{t:'Dia do Trabalhador',d:'05-01'},{t:'Dia do RH',d:'06-03'}],
+  'reciclagem e meio ambiente':[{t:'Dia do Meio Ambiente',d:'06-05'},{t:'Dia da Terra',d:'04-22'},{t:'Dia Mundial da Reciclagem',d:'05-17'}],
+  'restaurante':[{t:'Dia da Pizza',d:'07-10'},{t:'Dia do Chocolate',d:'07-07'},{t:'Dia do Hamburguer',d:'05-28'}],
+  'rastreamento de veículos':[{t:'Dia do Motorista',d:'07-25'},{t:'Dia Nacional do Trânsito',d:'09-25'}],
+  'social media':[{t:'Dia das Redes Sociais',d:'06-30'},{t:'Dia do Marketing Digital',d:'03-20'},{t:'Dia do Conteúdo Digital',d:'09-05'}],
+};
+const DATAS_UNIVERSAIS=[
+  {t:'Ano Novo',d:'01-01'},{t:'Carnaval',d:'03-04'},{t:'Sexta-Feira Santa',d:'04-18'},
+  {t:'Páscoa',d:'04-20'},{t:'Dia das Mães',d:'05-11'},{t:'Dia dos Namorados',d:'06-12'},
+  {t:'Dia dos Pais',d:'08-10'},{t:'Dia das Crianças',d:'10-12'},
+  {t:'Black Friday',d:'11-28'},{t:'Natal',d:'12-25'},{t:'Réveillon',d:'12-31'},
+];
+
+const STATUS_COLS=[
+  {key:'ideia',label:'Ideia',color:'#7A6555'},
+  {key:'producao',label:'Em produção',color:'#92600A'},
+  {key:'aguardando',label:'Aguard. aprovação',color:'#1D5FA8'},
+  {key:'aprovado',label:'Aprovado',color:'#2D7A3A'},
+  {key:'publicado',label:'Publicado',color:'#3D1F00'},
+];
+
+function toast(msg,type='info'){
+  const el=document.createElement('div');
+  el.style.cssText=`position:fixed;top:20px;right:20px;z-index:9999;padding:14px 20px;border-radius:10px;font-size:14px;font-weight:500;color:#fff;background:${type==='error'?'#B91C1C':type==='success'?'#2D7A3A':'#3D1F00'};box-shadow:0 4px 20px rgba(0,0,0,.2);max-width:320px`;
+  el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3500);
+}
+
+// ─── CAMPO EDITÁVEL INLINE ───
+function EditableField({value, onSave, placeholder='Clique para editar...', multiline=true, label}){
+  const [editing,setEditing]=useState(false);
+  const [val,setVal]=useState(value||'');
+  useEffect(()=>setVal(value||''),[value]);
+  async function save(){setEditing(false);if(val!==value)await onSave(val);}
+  if(editing) return(
+    <div>
+      {multiline
+        ?<textarea value={val} onChange={e=>setVal(e.target.value)} autoFocus style={{minHeight:100}} onBlur={save}/>
+        :<input value={val} onChange={e=>setVal(e.target.value)} autoFocus onBlur={save} onKeyDown={e=>e.key==='Enter'&&save()}/>}
+      <div style={{display:'flex',gap:8,marginTop:6}}>
+        <button className="btn btn-primary btn-sm" onClick={save}>Salvar</button>
+        <button className="btn btn-outline btn-sm" onClick={()=>{setEditing(false);setVal(value||'');}}>Cancelar</button>
+      </div>
+    </div>
+  );
+  return(
+    <div className={`editable-field${!val?' empty':''}`} onClick={()=>setEditing(true)} title="Clique para editar">
+      {val||placeholder}
+      <span style={{fontSize:11,color:'#C8956C',marginLeft:8,opacity:.7}}>✏</span>
+    </div>
+  );
+}
+
+// ─── APROVAÇÃO DO CLIENTE ───
+function AprovacaoPage({token}){
+  const [cards,setCards]=useState([]);const [lote,setLote]=useState(null);
+  const [loading,setLoading]=useState(true);const [reprovandoId,setReprovandoId]=useState(null);const [obs,setObs]=useState('');
+  useEffect(()=>{
+    async function load(){
+      const {data:l}=await sb.from('aprovacao_lotes').select('*').eq('token',token).single();
+      if(!l){setLoading(false);return;}setLote(l);
+      const {data:lcs}=await sb.from('aprovacao_lote_cards').select('*,card:cards(*,midias:card_midias(*))').eq('lote_id',l.id);
+      setCards(lcs||[]);setLoading(false);
+    }load();
+  },[token]);
+  async function aprovar(lcId,cardId){
+    await sb.from('aprovacao_lote_cards').update({status:'aprovado',respondido_em:new Date().toISOString()}).eq('id',lcId);
+    await sb.from('cards').update({aprovacao_status:'aprovado',status:'aprovado'}).eq('id',cardId);
+    await sb.from('notificacoes').insert({titulo:'Conteúdo aprovado! ♥',mensagem:'Um conteúdo foi aprovado pelo cliente.',tipo:'success'});
+    setCards(cs=>cs.map(c=>c.id===lcId?{...c,status:'aprovado'}:c));toast('Aprovado!','success');
+  }
+  async function reprovar(lcId,cardId){
+    if(!obs.trim()||obs.trim().length<5){toast('Descreva o motivo (mín. 5 caracteres)','error');return;}
+    await sb.from('aprovacao_lote_cards').update({status:'reprovado',observacao_cliente:obs,respondido_em:new Date().toISOString()}).eq('id',lcId);
+    await sb.from('cards').update({aprovacao_status:'reprovado',status:'producao',observacao_cliente:obs}).eq('id',cardId);
+    await sb.from('notificacoes').insert({titulo:'Conteúdo reprovado ✕',mensagem:`Motivo: ${obs}`,tipo:'warning'});
+    setCards(cs=>cs.map(c=>c.id===lcId?{...c,status:'reprovado',observacao_cliente:obs}:c));
+    setReprovandoId(null);setObs('');toast('Resposta registrada!');
+  }
+  if(loading)return<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#3D1F00',color:'#fff',fontSize:18}}>Carregando...</div>;
+  if(!lote)return<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#3D1F00',color:'#fff',fontSize:18,textAlign:'center',padding:24}}>Link inválido ou já utilizado.</div>;
+  return(
+    <div className="aprova-page">
+      <div className="aprova-card">
+        <div className="aprova-header"><div style={{fontSize:22,fontWeight:700,color:'#fff'}}>Lumet Marketing</div><div style={{fontSize:14,color:'rgba(255,255,255,.7)',marginTop:4}}>Aprovação de conteúdo</div></div>
+        <div style={{padding:24}}>
+          {cards.every(c=>c.status!=='pendente')&&<div style={{background:'#D4EDDA',color:'#2D7A3A',borderRadius:12,padding:16,textAlign:'center',fontWeight:600,marginBottom:16}}>✓ Todas as respostas registradas. Obrigado!</div>}
+          {cards.map((lc,i)=>{
+            const card=lc.card;const midias=card?.midias||[];const m0=midias[0];
+            return(
+              <div key={lc.id} style={{marginBottom:28,paddingBottom:28,borderBottom:i<cards.length-1?'1px solid #E5D5C5':'none'}}>
+                <div style={{fontSize:12,color:'#7A6555',marginBottom:6}}>Conteúdo {i+1} de {cards.length}</div>
+                <div style={{fontSize:16,fontWeight:600,color:'#2C1500',marginBottom:12}}>{card?.nome}</div>
+                {m0&&(m0.tipo==='video'?<video controls style={{width:'100%',borderRadius:12,marginBottom:12}}><source src={m0.url}/></video>:<img src={m0.url} alt="arte" style={{width:'100%',maxHeight:320,objectFit:'contain',borderRadius:12,background:'#FAF3EC',marginBottom:12}}/>)}
+                {midias.length>1&&<div style={{fontSize:12,color:'#7A6555',marginBottom:8}}>+{midias.length-1} mídia(s) adicional(is)</div>}
+                {card?.legenda&&<p style={{fontSize:14,color:'#2C1500',background:'#FAF3EC',padding:12,borderRadius:8,marginBottom:12,lineHeight:1.7}}>{card.legenda}</p>}
+                {card?.data_publicacao&&<div style={{fontSize:12,color:'#7A6555',marginBottom:12}}>{new Date(card.data_publicacao).toLocaleDateString('pt-BR')}</div>}
+                {lc.status==='pendente'&&(reprovandoId===lc.id?(
+                  <div>
+                    <textarea placeholder="Descreva o motivo..." value={obs} onChange={e=>setObs(e.target.value)} style={{marginBottom:12}}/>
+                    <div style={{display:'flex',gap:10}}><button className="btn btn-danger" style={{flex:1}} onClick={()=>reprovar(lc.id,card.id)}>Confirmar reprovação</button><button className="btn btn-outline" onClick={()=>{setReprovandoId(null);setObs('')}}>Cancelar</button></div>
+                  </div>
+                ):(
+                  <div className="aprova-btns">
+                    <button className="aprova-btn aprova-btn-sim" onClick={()=>aprovar(lc.id,card.id)}><span style={{fontSize:36}}>♥</span><span>Aprovar</span></button>
+                    <button className="aprova-btn aprova-btn-nao" onClick={()=>setReprovandoId(lc.id)}><span style={{fontSize:36}}>✕</span><span>Reprovar</span></button>
+                  </div>
+                ))}
+                {lc.status==='aprovado'&&<div style={{background:'#D4EDDA',color:'#2D7A3A',borderRadius:8,padding:12,textAlign:'center',fontWeight:600}}>♥ Aprovado</div>}
+                {lc.status==='reprovado'&&<div style={{background:'#FEE2E2',color:'#B91C1C',borderRadius:8,padding:12,fontWeight:600}}>✕ Reprovado{lc.observacao_cliente?` — ${lc.observacao_cliente}`:''}</div>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── APP ───
+function App(){
+  const params=new URLSearchParams(window.location.search);
+  const aprovToken=params.get('aprovar');
+  if(aprovToken)return<AprovacaoPage token={aprovToken}/>;
+  const [page,setPage]=useState('dashboard');
+  const [clienteId,setClienteId]=useState(null);
+  const [funcionarios,setFuncionarios]=useState([]);
+  const [clientes,setClientes]=useState([]);
+  const [cards,setCards]=useState([]);
+  const [notifs,setNotifs]=useState([]);
+  const [notifUnread,setNotifUnread]=useState(0);
+  const [showNotif,setShowNotif]=useState(false);
+
+  useEffect(()=>{
+    loadAll();
+    const ch=sb.channel('rt').on('postgres_changes',{event:'*',schema:'public',table:'notificacoes'},loadNotifs).on('postgres_changes',{event:'*',schema:'public',table:'cards'},loadCards).on('postgres_changes',{event:'*',schema:'public',table:'checklist_items'},loadFuncs).subscribe();
+    return()=>sb.removeChannel(ch);
+  },[]);
+
+  async function loadAll(){loadFuncs();loadClientes();loadCards();loadNotifs();}
+  async function loadFuncs(){const {data}=await sb.from('funcionarios').select('*,observacao:funcionario_observacoes(*),checklist:checklist_items(*)').eq('status','ativo');setFuncionarios(data||[]);}
+  async function loadClientes(){const {data}=await sb.from('clientes').select('*').eq('status','ativo');setClientes(data||[]);}
+  async function loadCards(){const {data}=await sb.from('cards').select('*,midias:card_midias(*)');setCards(data||[]);}
+  async function loadNotifs(){const {data}=await sb.from('notificacoes').select('*').order('created_at',{ascending:false}).limit(30);setNotifs(data||[]);setNotifUnread((data||[]).filter(n=>!n.lida).length);}
+
+  function navTo(p,cid=null){setPage(p);if(cid)setClienteId(cid);}
+  const currentCliente=clientes.find(c=>c.id===clienteId);
+
+  return(
+    <div style={{display:'flex'}}>
+      <Sidebar page={page} navTo={navTo} notifUnread={notifUnread} showNotif={showNotif} setShowNotif={setShowNotif} notifs={notifs} loadNotifs={loadNotifs}/>
+      <div className="main">
+        {page==='dashboard'&&<Dashboard funcionarios={funcionarios} clientes={clientes} cards={cards} notifs={notifs} navTo={navTo} reload={loadAll}/>}
+        {page==='clientes'&&<ClientesPage clientes={clientes} navTo={navTo} reload={loadClientes} funcionarios={funcionarios}/>}
+        {page==='cliente'&&currentCliente&&<ClienteDetalhe cliente={currentCliente} cards={cards.filter(c=>c.cliente_id===clienteId)} funcionarios={funcionarios} reload={loadAll} navTo={navTo}/>}
+        {page==='calendario'&&<CalendarioPage cards={cards} clientes={clientes}/>}
+        {page==='equipe'&&<EquipePage funcionarios={funcionarios} reload={loadFuncs}/>}
+        {page==='processos'&&<ProcessosPage/>}
+      </div>
+    </div>
+  );
+}
+
+// ─── SIDEBAR ───
+function Sidebar({page,navTo,notifUnread,showNotif,setShowNotif,notifs,loadNotifs}){
+  const nav=[{key:'dashboard',icon:'DB',label:'Dashboard'},{key:'clientes',icon:'CL',label:'Clientes'},{key:'calendario',icon:'CA',label:'Calendario'},{key:'equipe',icon:'EQ',label:'Equipe'},{key:'processos',icon:'PR',label:'Processos'}];
+  async function marcarLidas(){await sb.from('notificacoes').update({lida:true}).eq('lida',false);loadNotifs();}
+  return(
+    <div className="sidebar">
+      <div className="sidebar-logo">Lumet<br/><span>Marketing Agency</span></div>
+      {nav.map(n=><div key={n.key} className={`nav-item${page===n.key||page==='cliente'&&n.key==='clientes'?' active':''}`} onClick={()=>navTo(n.key)}><span className="nav-icon">{n.icon}</span>{n.label}</div>)}
+      <div style={{marginTop:'auto'}}>
+        <div className="nav-item" onClick={()=>{setShowNotif(!showNotif);if(!showNotif)marcarLidas();}}>
+          <span className="nav-icon">NT</span>Notificações
+          {notifUnread>0&&<span style={{background:'#C8956C',color:'#fff',borderRadius:20,padding:'1px 7px',fontSize:11,marginLeft:'auto'}}>{notifUnread}</span>}
+        </div>
+        {showNotif&&<div className="notif-panel">{notifs.length===0?<p style={{fontSize:13,color:'#7A6555',textAlign:'center',padding:8}}>Sem notificações</p>:notifs.slice(0,10).map(n=><div key={n.id} style={{padding:'8px 0',borderBottom:'1px solid #E5D5C5',opacity:n.lida?.6:1}}><div style={{fontSize:13,fontWeight:600,color:n.tipo==='success'?'#2D7A3A':n.tipo==='warning'?'#92600A':'#3D1F00'}}>{n.titulo}</div><div style={{fontSize:12,color:'#7A6555'}}>{n.mensagem}</div></div>)}</div>}
+      </div>
+    </div>
+  );
+}
+
+// ─── DASHBOARD ───
+function Dashboard({funcionarios,clientes,cards,notifs,navTo,reload}){
+  const pendentes=cards.filter(c=>c.status==='aguardando').length;
+  const aprovados=cards.filter(c=>c.status==='aprovado').length;
+  return(
+    <div>
+      <div className="page-header"><div><div className="page-title">Dashboard</div><div className="page-sub">Visão geral da agência</div></div></div>
+      <div className="grid-4" style={{marginBottom:24}}>
+        {[{val:clientes.length,lbl:'Clientes ativos',color:'#3D1F00',action:()=>navTo('clientes')},{val:cards.length,lbl:'Conteúdos no kanban',color:'#92600A',action:()=>navTo('clientes')},{val:pendentes,lbl:'Aguardando aprovação',color:'#1D5FA8',action:()=>navTo('clientes')},{val:aprovados,lbl:'Aprovados',color:'#2D7A3A',action:()=>navTo('clientes')}].map((s,i)=>(
+          <div key={i} className="stat-card" onClick={s.action}>
+            <div className="stat-val" style={{color:s.color}}>{s.val}</div>
+            <div className="stat-lbl">{s.lbl}</div>
+            <div style={{fontSize:11,color:'#C8956C',marginTop:4}}>clique para ver →</div>
+          </div>
+        ))}
+      </div>
+      <div className="section-title">Equipe — checklist do dia</div>
+      <div className="grid-2" style={{marginBottom:24}}>{funcionarios.map(f=><FuncChecklistCard key={f.id} func={f} reload={reload}/>)}</div>
+      <div className="section-title">Notificações recentes</div>
+      <div className="card">{notifs.length===0?<p style={{color:'#7A6555',fontSize:14}}>Nenhuma notificação ainda.</p>:notifs.slice(0,5).map(n=><div key={n.id} style={{display:'flex',gap:12,padding:'10px 0',borderBottom:'1px solid #E5D5C5',alignItems:'flex-start'}}><div style={{width:34,height:34,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:n.tipo==='success'?'#D4EDDA':n.tipo==='warning'?'#FEF3C7':'#E8C9A8',fontSize:16,flexShrink:0}}>{n.tipo==='success'?'✓':n.tipo==='warning'?'!':'ℹ'}</div><div><div style={{fontSize:14,fontWeight:600,color:'#2C1500'}}>{n.titulo}</div><div style={{fontSize:13,color:'#7A6555'}}>{n.mensagem}</div><div style={{fontSize:11,color:'#A89080'}}>{new Date(n.created_at).toLocaleString('pt-BR')}</div></div></div>)}</div>
+    </div>
+  );
+}
+
+
+// ─── PROCESSOS PAGE ───
+function ProcessosPage(){
+  const ETAPAS=[
+    {key:'briefing',num:1,titulo:'Briefing',desc:'Formulario e instrucoes para coleta de informacoes do cliente'},
+    {key:'arquetipo',num:2,titulo:'Arquetipo',desc:'Guia para identificacao e definicao do arquetipo da marca'},
+    {key:'planejamento',num:3,titulo:'Planejamento Estrategico',desc:'Processo e modelo de planejamento estrategico'},
+    {key:'conteudo_mensal',num:4,titulo:'Conteudo Mensal',desc:'Template e instrucoes para planejamento mensal de conteudo'},
+    {key:'prompt_relatorio',num:5,titulo:'Prompt para Relatorio de Metricas',desc:'Prompt para gerar relatorios de metricas com IA'},
+  ];
+  const [dados,setDados]=useState({});
+  const [loading,setLoading]=useState(true);
+  const [uploading,setUploading]=useState({});
+  const [expanded,setExpanded]=useState({briefing:true});
+
+  useEffect(()=>{
+    sb.from('processos_conteudo').select('*').then(({data})=>{
+      const d={};(data||[]).forEach(item=>{d[item.etapa_key]=item;});
+      setDados(d);setLoading(false);
+    }).catch(()=>setLoading(false));
+  },[]);
+
+  async function saveTexto(key,texto){
+    const ex=dados[key];
+    if(ex){await sb.from('processos_conteudo').update({texto,updated_at:new Date().toISOString()}).eq('id',ex.id);}
+    else{const {data:r}=await sb.from('processos_conteudo').insert({etapa_key:key,texto}).select().single();if(r)setDados(d=>({...d,[key]:r}));return;}
+    setDados(d=>({...d,[key]:{...d[key],texto}}));
+    toast('Salvo!','success');
+  }
+
+  async function uploadDoc(key,file){
+    setUploading(u=>({...u,[key]:true}));
+    const ext=file.name.split('.').pop();
+    const path='processos/'+key+'/'+Date.now()+'.'+ext;
+    const {error}=await sb.storage.from('midias').upload(path,file);
+    if(error){toast('Erro no upload','error');setUploading(u=>({...u,[key]:false}));return;}
+    const {data:{publicUrl}}=sb.storage.from('midias').getPublicUrl(path);
+    const ex=dados[key];
+    const docs=[...(ex&&ex.docs?ex.docs:[]),{url:publicUrl,nome:file.name,id:Date.now()}];
+    if(ex){await sb.from('processos_conteudo').update({docs}).eq('id',ex.id);}
+    else{const {data:r}=await sb.from('processos_conteudo').insert({etapa_key:key,docs}).select().single();if(r)setDados(d=>({...d,[key]:r}));setUploading(u=>({...u,[key]:false}));return;}
+    setDados(d=>({...d,[key]:{...d[key],docs}}));
+    setUploading(u=>({...u,[key]:false}));
+    toast('Enviado!','success');
+  }
+
+  async function removeDoc(key,docId){
+    const ex=dados[key];if(!ex)return;
+    const docs=(ex.docs||[]).filter(d=>d.id!==docId);
+    await sb.from('processos_conteudo').update({docs}).eq('id',ex.id);
+    setDados(d=>({...d,[key]:{...d[key],docs}}));
+    toast('Removido!','success');
+  }
+
+  if(loading)return React.createElement('div',{style:{padding:40,textAlign:'center',color:'#7A6555',fontSize:14}},'Carregando...');
+
+  return(
+    React.createElement('div',null,
+      React.createElement('div',{className:'page-header'},
+        React.createElement('div',null,
+          React.createElement('div',{className:'page-title'},'Processos'),
+          React.createElement('div',{className:'page-sub'},'Guia interno de etapas para a equipe')
+        )
+      ),
+      ETAPAS.map(etapa=>{
+        const dado=dados[etapa.key]||{};
+        const isOpen=!!expanded[etapa.key];
+        return React.createElement('div',{
+          key:etapa.key,
+          style:{background:'#fff',borderRadius:16,border:'1px solid #E5D5C5',overflow:'hidden',boxShadow:'0 1px 4px rgba(61,31,0,.06)',marginBottom:14}
+        },
+          React.createElement('div',{
+            onClick:()=>setExpanded(e=>({...e,[etapa.key]:!e[etapa.key]})),
+            style:{padding:'18px 22px',display:'flex',alignItems:'center',gap:14,cursor:'pointer',background:'#FAF3EC',borderBottom:isOpen?'1px solid #E5D5C5':'none'}
+          },
+            React.createElement('div',{style:{width:36,height:36,borderRadius:10,background:'#3D1F00',color:'#fff',fontWeight:700,fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},etapa.num),
+            React.createElement('div',{style:{flex:1}},
+              React.createElement('div',{style:{fontWeight:700,color:'#2C1500',fontSize:15}},etapa.titulo),
+              React.createElement('div',{style:{fontSize:12,color:'#7A6555',marginTop:2}},etapa.desc)
+            ),
+            React.createElement('div',{style:{color:'#7A6555',fontSize:14,fontWeight:700,transform:isOpen?'rotate(180deg)':'none',transition:'transform .2s'}},'v')
+          ),
+          isOpen&&React.createElement('div',{style:{padding:24}},
+            React.createElement('div',{style:{marginBottom:16}},
+              React.createElement('label',{style:{display:'block',fontSize:11,fontWeight:700,color:'#7A6555',marginBottom:7,textTransform:'uppercase',letterSpacing:'.05em'}},
+                etapa.key==='prompt_relatorio'?'Prompt':'Conteudo e instrucoes'
+              ),
+              React.createElement(EditableField,{
+                value:dado.texto||'',
+                onSave:v=>saveTexto(etapa.key,v),
+                placeholder:etapa.key==='prompt_relatorio'?'Cole aqui o prompt para gerar relatorios com IA...':'Clique para adicionar instrucoes desta etapa...'
+              })
+            ),
+            React.createElement('div',null,
+              React.createElement('label',{style:{display:'block',fontSize:11,fontWeight:700,color:'#7A6555',marginBottom:7,textTransform:'uppercase',letterSpacing:'.05em'}},'Documentos'),
+              (dado.docs||[]).map(doc=>
+                React.createElement('div',{key:doc.id,style:{display:'flex',alignItems:'center',gap:12,padding:'11px 14px',background:'#F5E6D3',borderRadius:10,marginBottom:8,border:'1px solid #E5D5C5'}},
+                  React.createElement('span',{style:{fontSize:11,fontWeight:700,color:'#3D1F00',background:'#EDD9C0',padding:'3px 8px',borderRadius:6,flexShrink:0}},'DOC'),
+                  React.createElement('a',{href:doc.url,target:'_blank',rel:'noreferrer',style:{flex:1,fontSize:13,color:'#1D5FA8',fontWeight:500}},doc.nome),
+                  React.createElement('button',{onClick:()=>removeDoc(etapa.key,doc.id),style:{color:'#B91C1C',fontWeight:700,fontSize:14,flexShrink:0,cursor:'pointer',border:'none',background:'none'}},'X')
+                )
+              ),
+              React.createElement('label',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:8,cursor:uploading[etapa.key]?'default':'pointer',background:'#FAF3EC',border:'2px dashed #E5D5C5',borderRadius:12,padding:14,color:'#7A6555',fontSize:13,marginTop:8,fontWeight:500}},
+                uploading[etapa.key]?'Enviando...':'+ Adicionar documento',
+                React.createElement('input',{type:'file',accept:'.pdf,image/*,.doc,.docx',style:{display:'none'},disabled:!!uploading[etapa.key],onChange:e=>{if(e.target.files[0])uploadDoc(etapa.key,e.target.files[0]);}})
+              )
+            )
+          )
+        );
+      })
+    )
+  );
+}
+
+// ─── PROCESSOS DA AGÊNCIA ───
+function ProcessosAgencia(){
+  const [processos,setProcessos]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [showModal,setShowModal]=useState(false);
+  const [editando,setEditando]=useState(null);
+  useEffect(()=>{loadProcessos();},[]);
+  async function loadProcessos(){const {data}=await sb.from('processos_agencia').select('*').order('ordem',{ascending:true});setProcessos(data||[]);setLoading(false);}
+  async function deletar(id){if(!window.confirm('Apagar este processo?'))return;await sb.from('processos_agencia').delete().eq('id',id);loadProcessos();toast('Processo apagado!','success');}
+  async function moverOrdem(id,direcao){
+    const idx=processos.findIndex(p=>p.id===id);
+    const troca=processos[idx+direcao];
+    if(!troca)return;
+    const ordemAtual=processos[idx].ordem;
+    const ordemTroca=troca.ordem;
+    await sb.from('processos_agencia').update({ordem:ordemTroca}).eq('id',id);
+    await sb.from('processos_agencia').update({ordem:ordemAtual}).eq('id',troca.id);
+    loadProcessos();
+  }
+  if(loading)return<div style={{color:'#7A6555',fontSize:14,padding:16}}>Carregando...</div>;
+  return(
+    <div className="card" style={{marginBottom:0}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <p style={{fontSize:13,color:'#7A6555'}}>Guia de processos para sua equipe seguir com cada cliente</p>
+        <button className="btn btn-primary btn-sm" onClick={()=>{setEditando(null);setShowModal(true);}}>+ Adicionar etapa</button>
+      </div>
+      {processos.length===0?(
+        <div style={{textAlign:'center',padding:'32px 0',color:'#A89080'}}>
+          <div style={{fontSize:32,marginBottom:8}}>📋</div>
+          <p style={{fontSize:14}}>Nenhuma etapa cadastrada ainda.</p>
+          <p style={{fontSize:13,marginTop:4}}>Clique em "+ Adicionar etapa" para começar.</p>
+        </div>
+      ):(
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          {processos.map((p,i)=>(
+            <div key={p.id} style={{display:'flex',gap:14,alignItems:'flex-start',padding:16,background:'#FAF3EC',borderRadius:12,border:'1px solid #E5D5C5',borderLeft:'4px solid #8B5A2B'}}>
+              <div style={{width:36,height:36,borderRadius:'50%',background:'#3D1F00',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:15,flexShrink:0}}>{i+1}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:15,fontWeight:600,color:'#2C1500',marginBottom:4}}>{p.titulo}</div>
+                {p.descricao&&<p style={{fontSize:13,color:'#6B3A1F',lineHeight:1.7,marginBottom:6,whiteSpace:'pre-wrap'}}>{p.descricao}</p>}
+                {p.link&&<a href={p.link} target="_blank" rel="noreferrer" style={{fontSize:13,color:'#1D5FA8',display:'inline-flex',alignItems:'center',gap:4}}>🔗 {p.link_label||p.link}</a>}
+              </div>
+              <div style={{display:'flex',gap:4,flexShrink:0,flexDirection:'column'}}>
+                <div style={{display:'flex',gap:4}}>
+                  <button onClick={()=>moverOrdem(p.id,-1)} disabled={i===0} style={{padding:'3px 7px',borderRadius:6,border:'1px solid #E5D5C5',background:'#fff',color:'#7A6555',fontSize:12,cursor:i===0?'default':'pointer',opacity:i===0?.3:1}}>↑</button>
+                  <button onClick={()=>moverOrdem(p.id,1)} disabled={i===processos.length-1} style={{padding:'3px 7px',borderRadius:6,border:'1px solid #E5D5C5',background:'#fff',color:'#7A6555',fontSize:12,cursor:i===processos.length-1?'default':'pointer',opacity:i===processos.length-1?.3:1}}>↓</button>
+                </div>
+                <div style={{display:'flex',gap:4}}>
+                  <button onClick={()=>{setEditando(p);setShowModal(true);}} style={{padding:'3px 7px',borderRadius:6,border:'1px solid #E5D5C5',background:'#fff',color:'#92600A',fontSize:12,cursor:'pointer'}}>Ed</button>
+                  <button onClick={()=>deletar(p.id)} style={{padding:'3px 7px',borderRadius:6,border:'1px solid #FCA5A5',background:'#FEE2E2',color:'#B91C1C',fontSize:12,cursor:'pointer'}}>X</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {showModal&&<ProcessoModal processo={editando} onClose={()=>{setShowModal(false);setEditando(null);}} reload={loadProcessos} totalProcessos={processos.length}/>}
+    </div>
+  );
+}
+
+function ProcessoModal({processo,onClose,reload,totalProcessos}){
+  const [form,setForm]=useState({titulo:processo?.titulo||'',descricao:processo?.descricao||'',link:processo?.link||'',link_label:processo?.link_label||''});
+  async function salvar(){
+    if(!form.titulo.trim()){toast('Titulo obrigatorio','error');return;}
+    if(processo){await sb.from('processos_agencia').update(form).eq('id',processo.id);}
+    else{await sb.from('processos_agencia').insert({...form,ordem:totalProcessos+1});}
+    toast('Etapa salva!','success');reload();onClose();
+  }
+  return(
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header"><h3 style={{fontSize:18,fontWeight:600}}>{processo?'Editar etapa':'Nova etapa'}</h3><button onClick={onClose} style={{fontSize:20,color:'#7A6555'}}>x</button></div>
+        <div className="modal-body">
+          <div style={{marginBottom:14}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Titulo da etapa *</label><input value={form.titulo} onChange={e=>setForm({...form,titulo:e.target.value})} placeholder="Ex: Briefing, Arquetipo, Producao de conteudo"/></div>
+          <div style={{marginBottom:14}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Descricao / Instrucoes</label><textarea value={form.descricao} onChange={e=>setForm({...form,descricao:e.target.value})} placeholder="Descreva o que deve ser feito nessa etapa..." style={{minHeight:120}}/></div>
+          <div style={{marginBottom:14}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Link (opcional)</label><input value={form.link} onChange={e=>setForm({...form,link:e.target.value})} placeholder="https://..."/></div>
+          <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Nome do link (opcional)</label><input value={form.link_label} onChange={e=>setForm({...form,link_label:e.target.value})} placeholder="Ex: Modelo de briefing"/></div>
+        </div>
+        <div className="modal-footer"><button className="btn btn-outline" onClick={onClose}>Cancelar</button><button className="btn btn-primary" onClick={salvar}>Salvar etapa</button></div>
+      </div>
+    </div>
+  );
+}
+
+// ─── CHECKLIST CARD ───
+function FuncChecklistCard({func,reload}){
+  const [novaTask,setNovaTask]=useState('');const [editingId,setEditingId]=useState(null);const [editText,setEditText]=useState('');
+  const [obs,setObs]=useState(func.observacao?.[0]?.observacao||'');const [addingObs,setAddingObs]=useState(false);const [verDias,setVerDias]=useState(false);
+  const hoje=new Date().toISOString().split('T')[0];
+  const checklistHoje=(func.checklist||[]).filter(c=>c.data_tarefa===hoje);
+  const checklistPassado=(func.checklist||[]).filter(c=>c.data_tarefa<hoje&&!c.concluido);
+  const concluidas=checklistHoje.filter(c=>c.concluido).length;
+  async function addTask(){if(!novaTask.trim())return;await sb.from('checklist_items').insert({funcionario_id:func.id,titulo:novaTask,data_tarefa:hoje});setNovaTask('');reload();}
+  async function toggleTask(item){const now=item.concluido?null:new Date().toISOString();await sb.from('checklist_items').update({concluido:!item.concluido,concluido_em:now}).eq('id',item.id);reload();}
+  async function deleteTask(id){await sb.from('checklist_items').delete().eq('id',id);reload();}
+  async function saveEdit(id){if(!editText.trim())return;await sb.from('checklist_items').update({titulo:editText}).eq('id',id);setEditingId(null);setEditText('');reload();}
+  async function salvarObs(){const ex=func.observacao?.[0];if(ex)await sb.from('funcionario_observacoes').update({observacao:obs,updated_at:new Date().toISOString()}).eq('id',ex.id);else await sb.from('funcionario_observacoes').insert({funcionario_id:func.id,observacao:obs});setAddingObs(false);reload();toast('Observação salva!','success');}
+  return(
+    <div className="func-card">
+      <div style={{display:'flex',gap:12,alignItems:'center',marginBottom:14}}>
+        <div className="func-avatar">{func.nome.charAt(0)}</div>
+        <div style={{flex:1}}><div style={{fontWeight:600,color:'#2C1500'}}>{func.nome}</div><div style={{fontSize:13,color:'#7A6555'}}>{func.cargo||'Colaborador'}</div><div style={{fontSize:11,color:'#A89080'}}>{new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'})}</div></div>
+        <div style={{textAlign:'center',background:'#EDD9C0',borderRadius:8,padding:'6px 10px'}}><div style={{fontSize:18,fontWeight:700,color:'#3D1F00'}}>{concluidas}/{checklistHoje.length}</div><div style={{fontSize:10,color:'#6B3A1F'}}>hoje</div></div>
+      </div>
+      {checklistPassado.length>0&&<div style={{background:'#FEE2E2',borderRadius:8,padding:'8px 10px',marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:'#B91C1C',cursor:'pointer',display:'flex',justifyContent:'space-between'}} onClick={()=>setVerDias(!verDias)}>⚠️ {checklistPassado.length} tarefa(s) em atraso {verDias?'▲':'▼'}</div>{verDias&&checklistPassado.map(item=><div key={item.id} style={{fontSize:12,color:'#B91C1C',padding:'4px 0',borderTop:'1px solid #FCA5A5',marginTop:4}}>• {item.titulo} <span style={{color:'#A89080'}}>({new Date(item.data_tarefa+'T12:00').toLocaleDateString('pt-BR')})</span></div>)}</div>}
+      {checklistHoje.length>0&&<div style={{marginBottom:12}}>{checklistHoje.map(item=>(
+        <div key={item.id} className="checklist-item">
+          <div className={`checklist-check${item.concluido?' done':''}`} onClick={()=>toggleTask(item)}>{item.concluido&&'✓'}</div>
+          {editingId===item.id?(<div style={{display:'flex',gap:6,flex:1}}><input value={editText} onChange={e=>setEditText(e.target.value)} style={{flex:1,fontSize:13,padding:'4px 8px'}} autoFocus onKeyDown={e=>e.key==='Enter'&&saveEdit(item.id)}/><button className="btn btn-primary btn-sm" onClick={()=>saveEdit(item.id)}>✓</button><button className="btn btn-outline btn-sm" onClick={()=>setEditingId(null)}>✕</button></div>):(
+            <><span style={{fontSize:13,color:item.concluido?'#A89080':'#2C1500',textDecoration:item.concluido?'line-through':'none',flex:1}}>{item.titulo}</span>
+            {item.concluido_em&&<span style={{fontSize:10,color:'#A89080'}}>{new Date(item.concluido_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>}
+            <button onClick={()=>{setEditingId(item.id);setEditText(item.titulo);}} style={{color:'#92600A',fontSize:13,padding:'0 4px'}}>Ed</button>
+            <button onClick={()=>deleteTask(item.id)} style={{color:'#B91C1C',fontSize:13,padding:'0 4px'}}>X</button></>
+          )}
+        </div>
+      ))}</div>}
+      <div style={{display:'flex',gap:8,marginBottom:12}}><input placeholder="Nova tarefa de hoje..." value={novaTask} onChange={e=>setNovaTask(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addTask()} style={{flex:1,fontSize:13,padding:'7px 10px'}}/><button className="btn btn-primary btn-sm" onClick={addTask}>+</button></div>
+      {func.observacao?.[0]?.observacao&&!addingObs&&<div style={{background:'#FEF3C7',borderRadius:8,padding:10,marginBottom:8,fontSize:13,color:'#92600A',cursor:'pointer'}} onClick={()=>setAddingObs(true)}>📝 {func.observacao[0].observacao}</div>}
+      {addingObs?(<div><textarea placeholder="Observação de melhoria..." value={obs} onChange={e=>setObs(e.target.value)} style={{marginBottom:8,fontSize:13}}/><div style={{display:'flex',gap:8}}><button className="btn btn-primary btn-sm" onClick={salvarObs}>Salvar</button><button className="btn btn-outline btn-sm" onClick={()=>setAddingObs(false)}>Cancelar</button></div></div>):(<button className="btn btn-outline btn-sm" style={{width:'100%',justifyContent:'center'}} onClick={()=>setAddingObs(true)}>{func.observacao?.[0]?.observacao?'Editar observação':'+ Observação de melhoria'}</button>)}
+    </div>
+  );
+}
+
+// ─── CLIENTES ───
+function ClientesPage({clientes,navTo,reload,funcionarios}){
+  const [showModal,setShowModal]=useState(false);
+  return(
+    <div>
+      <div className="page-header"><div><div className="page-title">Clientes</div><div className="page-sub">{clientes.length} clientes ativos</div></div><button className="btn btn-primary" onClick={()=>setShowModal(true)}>+ Novo cliente</button></div>
+      <div className="grid-3">{clientes.map(c=><div key={c.id} className="client-card" style={{borderTopColor:c.cor||'#8B5A2B'}} onClick={()=>navTo('cliente',c.id)}><div style={{display:'flex',gap:12,alignItems:'center',marginBottom:12}}><div style={{width:44,height:44,borderRadius:10,background:c.cor+'22',color:c.cor,fontWeight:700,fontSize:18,display:'flex',alignItems:'center',justifyContent:'center'}}>{c.nome.charAt(0)}</div><div><div style={{fontWeight:600,color:'#2C1500'}}>{c.nome}</div><div style={{fontSize:12,color:'#7A6555'}}>{c.segmento}</div></div></div>{c.tom_de_voz&&<span className="tag">{c.tom_de_voz}</span>}</div>)}</div>
+      {showModal&&<ClienteModal onClose={()=>setShowModal(false)} reload={reload} funcionarios={funcionarios}/>}
+    </div>
+  );
+}
+
+function ClienteModal({onClose,reload,funcionarios,cliente}){
+  const [form,setForm]=useState({nome:cliente?.nome||'',segmento:cliente?.segmento||'',tom_de_voz:cliente?.tom_de_voz||'',briefing:cliente?.briefing||'',sobre:cliente?.sobre||'',estrategia:cliente?.estrategia||'',prompt_cliente:cliente?.prompt_cliente||'',arquetipos:cliente?.arquetipos||[],arquetipo_obs:cliente?.arquetipo_obs||'',cor:cliente?.cor||'#8B5A2B',responsavel_id:cliente?.responsavel_id||''});
+  async function salvar(){
+    if(!form.nome.trim()){toast('Nome obrigatório','error');return;}
+    const payload={...form,arquetipos:form.arquetipos};
+    if(cliente){await sb.from('clientes').update(payload).eq('id',cliente.id);}
+    else{
+      const {data}=await sb.from('clientes').insert(payload).select().single();
+      const seg=form.segmento?.toLowerCase();
+      const esp=(DATAS_SEGMENTO[seg]||[]).map(d=>({cliente_id:data.id,titulo:d.t,data:`2026-${d.d}`,tipo:'segmento'}));
+      const uni=DATAS_UNIVERSAIS.map(d=>({cliente_id:data.id,titulo:d.t,data:`2026-${d.d}`,tipo:'universal'}));
+      if(esp.length||uni.length)await sb.from('datas_comemorativas').insert([...uni,...esp]);
+    }
+    toast('Cliente salvo!','success');reload();onClose();
+  }
+  function toggleArquetipo(a){
+    const curr=form.arquetipos||[];
+    if(curr.includes(a))setForm({...form,arquetipos:curr.filter(x=>x!==a)});
+    else if(curr.length<3)setForm({...form,arquetipos:[...curr,a]});
+    else toast('Máximo 3 arquétipos','error');
+  }
+  return(
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header"><h3 style={{fontSize:18,fontWeight:600}}>{cliente?'Editar cliente':'Novo cliente'}</h3><button onClick={onClose} style={{fontSize:20,color:'#7A6555'}}>✕</button></div>
+        <div className="modal-body">
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Conteudo *</label><input value={form.nome} onChange={e=>setForm({...form,nome:e.target.value})} placeholder="Ex: Malta Marques Seguros"/></div>
+            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Segmento</label><select value={form.segmento} onChange={e=>setForm({...form,segmento:e.target.value})}><option value="">Selecione...</option>{SEGMENTOS.map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}</select></div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginTop:12}}>
+            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Tom de voz</label><select value={form.tom_de_voz} onChange={e=>setForm({...form,tom_de_voz:e.target.value})}><option value="">Selecione...</option>{['Formal','Descontraído','Inspirador','Técnico','Jovem','Profissional','Acolhedor','Divertido'].map(t=><option key={t} value={t}>{t}</option>)}</select></div>
+            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Cor</label><input type="color" value={form.cor} onChange={e=>setForm({...form,cor:e.target.value})} style={{height:42,padding:4}}/></div>
+          </div>
+          <div style={{marginTop:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:8}}>Arquétipos (até 3)</label><div style={{display:'flex',flexWrap:'wrap',gap:6}}>{Object.entries(ARQUETIPOS).map(([k,v])=><button key={k} onClick={()=>toggleArquetipo(k)} style={{padding:'5px 12px',borderRadius:20,fontSize:12,fontWeight:500,border:'1.5px solid',borderColor:(form.arquetipos||[]).includes(k)?'#3D1F00':'#E5D5C5',background:(form.arquetipos||[]).includes(k)?'#3D1F00':'#fff',color:(form.arquetipos||[]).includes(k)?'#fff':'#7A6555',cursor:'pointer'}}>{v.emoji} {k}</button>)}</div></div>
+          <div style={{marginTop:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Responsável</label><select value={form.responsavel_id} onChange={e=>setForm({...form,responsavel_id:e.target.value})}><option value="">Selecione...</option>{funcionarios.map(f=><option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
+        </div>
+        <div className="modal-footer"><button className="btn btn-outline" onClick={onClose}>Cancelar</button><button className="btn btn-primary" onClick={salvar}>Salvar cliente</button></div>
+      </div>
+    </div>
+  );
+}
+
+// ─── CLIENTE DETALHE ───
+function ClienteDetalhe({cliente,cards,funcionarios,reload,navTo}){
+  const [datas,setDatas]=useState([]);const [links,setLinks]=useState([]);
+  const [showCardModal,setShowCardModal]=useState(false);const [editCard,setEditCard]=useState(null);
+  const [showEditCliente,setShowEditCliente]=useState(false);
+  const [selectedForLote,setSelectedForLote]=useState([]);const [loteLink,setLoteLink]=useState('');const [showLoteModal,setShowLoteModal]=useState(false);
+  const [tab,setTab]=useState('kanban');
+  const [novaData,setNovaData]=useState({titulo:'',data:''});const [addingData,setAddingData]=useState(false);
+  const [estrategias,setEstrategias]=useState([]);const [metricas,setMetricas]=useState([]);
+  const [uploadingEst,setUploadingEst]=useState(false);const [uploadingMet,setUploadingMet]=useState(false);
+  const [mesSel,setMesSel]=useState('');
+
+  useEffect(()=>{
+    sb.from('datas_comemorativas').select('*').eq('cliente_id',cliente.id).then(({data})=>setDatas(data||[]));
+    sb.from('cliente_links').select('*').eq('cliente_id',cliente.id).then(({data})=>setLinks(data||[]));
+    sb.from('cliente_docs').select('*').eq('cliente_id',cliente.id).eq('tipo','estrategia').then(({data})=>setEstrategias(data||[]));
+    sb.from('cliente_docs').select('*').eq('cliente_id',cliente.id).eq('tipo','metrica').then(({data})=>setMetricas(data||[]));
+  },[cliente.id]);
+
+  async function saveField(field,val){
+    await sb.from('clientes').update({[field]:val}).eq('id',cliente.id);
+    toast('Salvo!','success');reload();
+  }
+  async function uploadDoc(file,tipo,mes=null){
+    if(tipo==='estrategia')setUploadingEst(true);else setUploadingMet(true);
+    const ext=file.name.split('.').pop();const path=`docs/${cliente.id}/${tipo}/${Date.now()}.${ext}`;
+    const {error}=await sb.storage.from('midias').upload(path,file);
+    if(error){toast('Erro no upload','error');setUploadingEst(false);setUploadingMet(false);return;}
+    const {data:{publicUrl}}=sb.storage.from('midias').getPublicUrl(path);
+    const {data:doc}=await sb.from('cliente_docs').insert({cliente_id:cliente.id,tipo,url:publicUrl,nome:file.name,mes}).select().single();
+    if(tipo==='estrategia')setEstrategias(e=>[...e,doc]);else setMetricas(m=>[...m,doc]);
+    setUploadingEst(false);setUploadingMet(false);setMesSel('');toast('Arquivo enviado!','success');
+  }
+  async function deleteDoc(id,tipo){
+    await sb.from('cliente_docs').delete().eq('id',id);
+    if(tipo==='estrategia')setEstrategias(e=>e.filter(d=>d.id!==id));else setMetricas(m=>m.filter(d=>d.id!==id));
+    toast('Removido!','success');
+  }
+  async function moverCard(cardId,novoStatus){
+    await sb.from('cards').update({status:novoStatus}).eq('id',cardId);
+    if(novoStatus==='publicado')await sb.from('notificacoes').insert({titulo:'Conteúdo publicado!',mensagem:'Um conteúdo foi marcado como publicado.',tipo:'success'});
+    reload();
+  }
+  async function deletarCard(cardId){
+    if(!window.confirm('Apagar este card? Esta ação não pode ser desfeita.'))return;
+    try {
+      // 1. Apagar mídias do card
+      await sb.from('card_midias').delete().eq('card_id',cardId);
+      // 2. Apagar referências nos lotes de aprovação
+      await sb.from('aprovacao_lote_cards').delete().eq('card_id',cardId);
+      // 3. Apagar o card em si
+      const {error}=await sb.from('cards').delete().eq('id',cardId);
+      if(error){toast('Erro ao apagar: '+error.message,'error');return;}
+      toast('Card apagado!','success');
+      // 4. Recarregar tudo incluindo calendário
+      await reload();
+    } catch(e){
+      toast('Erro ao apagar card. Tente novamente.','error');
+    }
+  }
+  async function gerarLote(){
+    if(selectedForLote.length===0){toast('Selecione ao menos 1 conteúdo','error');return;}
+    const {data:lote}=await sb.from('aprovacao_lotes').insert({cliente_id:cliente.id}).select().single();
+    await sb.from('aprovacao_lote_cards').insert(selectedForLote.map(cid=>({lote_id:lote.id,card_id:cid})));
+    const link=`${window.location.origin}${window.location.pathname}?aprovar=${lote.token}`;
+    setLoteLink(link);setShowLoteModal(true);setSelectedForLote([]);toast('Link gerado!','success');
+  }
+  async function addData(){
+    if(!novaData.titulo||!novaData.data){toast('Preencha título e data','error');return;}
+    const {data:d}=await sb.from('datas_comemorativas').insert({cliente_id:cliente.id,titulo:novaData.titulo,data:novaData.data,tipo:'personalizada'}).select().single();
+    setDatas([...datas,d]);setNovaData({titulo:'',data:''});setAddingData(false);toast('Data adicionada!','success');
+  }
+  async function removerData(id){await sb.from('datas_comemorativas').delete().eq('id',id);setDatas(datas.filter(d=>d.id!==id));}
+
+  const dragCard=useRef(null);
+  function onDragStart(cardId){dragCard.current=cardId;}
+  async function onDrop(status){if(dragCard.current){await moverCard(dragCard.current,status);dragCard.current=null;}}
+  const aguardando=cards.filter(c=>c.status==='aguardando');
+  const arquetipos=Array.isArray(cliente.arquetipos)?cliente.arquetipos:[];
+
+  return(
+    <div>
+      <div style={{display:'flex',gap:12,alignItems:'center',marginBottom:20,flexWrap:'wrap'}}>
+        <button className="btn btn-outline btn-sm" onClick={()=>navTo('clientes')}>← Voltar</button>
+        <div style={{width:40,height:40,borderRadius:10,background:cliente.cor+'22',color:cliente.cor,fontWeight:700,fontSize:18,display:'flex',alignItems:'center',justifyContent:'center'}}>{cliente.nome.charAt(0)}</div>
+        <div style={{flex:1}}><div style={{fontSize:20,fontWeight:700,color:'#2C1500'}}>{cliente.nome}</div><div style={{fontSize:13,color:'#7A6555'}}>{cliente.segmento}{cliente.tom_de_voz?` · ${cliente.tom_de_voz}`:''}</div></div>
+        <button className="btn btn-outline btn-sm" onClick={()=>setShowEditCliente(true)}>✏ Editar</button>
+        <button className="btn btn-primary btn-sm" onClick={()=>{setEditCard(null);setShowCardModal(true);}}>+ Conteúdo</button>
+      </div>
+
+      <div className="tabs">
+        {[{k:'kanban',l:'Kanban'},{k:'sobre',l:'Sobre a empresa'},{k:'datas',l:'Datas'},{k:'links',l:'Links'}].map(t=>(
+          <div key={t.k} className={`tab${tab===t.k?' active':''}`} onClick={()=>setTab(t.k)}>{t.l}</div>
+        ))}
+      </div>
+
+      {tab==='sobre'&&(
+        <div style={{display:'flex',flexDirection:'column',gap:16}}>
+          {/* Sobre a empresa */}
+          <div className="card"><div className="section-title">Sobre a empresa</div><EditableField value={cliente.sobre} onSave={v=>saveField('sobre',v)} placeholder="Clique para adicionar informações sobre a empresa..."/></div>
+          {/* Briefing */}
+          <div className="card"><div className="section-title">Briefing</div><EditableField value={cliente.briefing} onSave={v=>saveField('briefing',v)} placeholder="Clique para adicionar o briefing..."/></div>
+          {/* Arquétipo */}
+          <div className="card">
+            <div className="section-title">Arquétipos</div>
+            {arquetipos.length===0?<p style={{color:'#A89080',fontSize:14}}>Nenhum arquétipo selecionado. Clique em "Editar" para adicionar.</p>:(
+              <div>
+                {arquetipos.map(a=>{
+                  const info=ARQUETIPOS[a];if(!info)return null;
+                  return(
+                    <div key={a} style={{background:'#FAF3EC',borderRadius:12,padding:16,marginBottom:12,borderLeft:'4px solid #8B5A2B'}}>
+                      <div style={{fontSize:16,fontWeight:700,color:'#3D1F00',marginBottom:6}}>{info.emoji} {a}</div>
+                      <div style={{fontSize:13,color:'#6B3A1F',lineHeight:1.7,marginBottom:8}}>{info.desc}</div>
+                    </div>
+                  );
+                })}
+                <div style={{marginTop:8}}><div style={{fontSize:13,fontWeight:500,color:'#3D1F00',marginBottom:6}}>Observações sobre o arquétipo:</div><EditableField value={cliente.arquetipo_obs} onSave={v=>saveField('arquetipo_obs',v)} placeholder="Clique para adicionar observações..."/></div>
+              </div>
+            )}
+          </div>
+          {/* Estratégia Mensal */}
+          <div className="card">
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+              <div className="section-title" style={{marginBottom:0}}>Estratégia Mensal</div>
+            </div>
+            <div style={{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'flex-end'}}>
+              <div style={{flex:1,minWidth:160}}><label style={{display:'block',fontSize:12,fontWeight:500,marginBottom:4}}>Mês</label><select value={mesSel} onChange={e=>setMesSel(e.target.value)}><option value="">Selecione o mês...</option>{MESES.map((m,i)=><option key={i} value={String(i+1).padStart(2,'0')}>{m}</option>)}</select></div>
+              <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:'#FAF3EC',border:'2px dashed #E5D5C5',borderRadius:10,padding:'10px 16px',color:'#7A6555',fontSize:13,whiteSpace:'nowrap'}}>
+                {uploadingEst?'Enviando...':'📎 Upload PDF'}
+                <input type="file" accept=".pdf,image/*" style={{display:'none'}} disabled={!mesSel||uploadingEst} onChange={e=>{if(e.target.files[0]&&mesSel)uploadDoc(e.target.files[0],'estrategia',mesSel);else if(!mesSel)toast('Selecione o mês primeiro','error');}}/>
+              </label>
+            </div>
+            {estrategias.length===0?<p style={{color:'#A89080',fontSize:14}}>Nenhuma estratégia enviada ainda.</p>:(
+              <div>{MESES.map((mes,i)=>{
+                const mesStr=String(i+1).padStart(2,'0');
+                const docsDoMes=estrategias.filter(e=>e.mes===mesStr);
+                if(docsDoMes.length===0)return null;
+                return(<div key={mes} style={{marginBottom:12}}><div style={{fontSize:13,fontWeight:600,color:'#3D1F00',marginBottom:6}}>{mes}</div>{docsDoMes.map(d=><div key={d.id} className="pdf-item"><span style={{fontSize:20}}>📄</span><a href={d.url} target="_blank" rel="noreferrer" style={{flex:1,fontSize:13,color:'#1D5FA8',fontWeight:500}}>{d.nome}</a><button onClick={()=>deleteDoc(d.id,'estrategia')} style={{color:'#B91C1C',fontSize:14}}>X</button></div>)}</div>);
+              })}</div>
+            )}
+          </div>
+          {/* Relatório de Métricas */}
+          <div className="card">
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+              <div className="section-title" style={{marginBottom:0}}>Relatório de Métricas</div>
+              <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:'#3D1F00',color:'#fff',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:500}}>
+                {uploadingMet?'Enviando...':'+ Upload relatório'}
+                <input type="file" accept=".pdf,image/*" style={{display:'none'}} disabled={uploadingMet} onChange={e=>{if(e.target.files[0])uploadDoc(e.target.files[0],'metrica');}}/>
+              </label>
+            </div>
+            {metricas.length===0?<p style={{color:'#A89080',fontSize:14}}>Nenhum relatório enviado ainda. Gere seu relatório no Claude e faça o upload aqui.</p>:metricas.map(d=><div key={d.id} className="pdf-item"><span style={{fontSize:20}}>📊</span><a href={d.url} target="_blank" rel="noreferrer" style={{flex:1,fontSize:13,color:'#1D5FA8',fontWeight:500}}>{d.nome}</a><span style={{fontSize:11,color:'#A89080'}}>{new Date(d.created_at).toLocaleDateString('pt-BR')}</span><button onClick={()=>deleteDoc(d.id,'metrica')} style={{color:'#B91C1C',fontSize:14}}>X</button></div>)}
+          </div>
+          {/* Prompt do cliente */}
+          <div className="card"><div className="section-title">Prompt do cliente</div><div style={{background:'#FAF3EC',borderRadius:10,padding:4,marginBottom:8}}><p style={{fontSize:12,color:'#7A6555',padding:'4px 8px'}}>💡 Cole aqui o prompt ideal para usar no Claude ao criar conteúdo para este cliente</p></div><EditableField value={cliente.prompt_cliente} onSave={v=>saveField('prompt_cliente',v)} placeholder="Clique para adicionar o prompt ideal para este cliente..."/></div>
+        </div>
+      )}
+
+      {tab==='links'&&<div className="card"><div className="section-title">Links de referência</div><LinkManager clienteId={cliente.id} links={links} setLinks={setLinks}/></div>}
+
+      {tab==='datas'&&(
+        <div className="card">
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+            <div className="section-title" style={{marginBottom:0}}>Datas comemorativas</div>
+            <button className="btn btn-primary btn-sm" onClick={()=>setAddingData(true)}>+ Adicionar data</button>
+          </div>
+          {addingData&&<div style={{background:'#FAF3EC',borderRadius:10,padding:16,marginBottom:16,display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-end'}}><div style={{flex:2,minWidth:140}}><label style={{fontSize:12,fontWeight:500,display:'block',marginBottom:4}}>Título</label><input value={novaData.titulo} onChange={e=>setNovaData({...novaData,titulo:e.target.value})} placeholder="Ex: Dia do Cliente"/></div><div style={{flex:1,minWidth:120}}><label style={{fontSize:12,fontWeight:500,display:'block',marginBottom:4}}>Data</label><input type="date" value={novaData.data} onChange={e=>setNovaData({...novaData,data:e.target.value})}/></div><button className="btn btn-primary btn-sm" onClick={addData}>Salvar</button><button className="btn btn-outline btn-sm" onClick={()=>setAddingData(false)}>Cancelar</button></div>}
+          {datas.length===0?<p style={{color:'#A89080',fontSize:14}}>Nenhuma data cadastrada.</p>:<div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:10}}>{datas.sort((a,b)=>a.data.localeCompare(b.data)).map(d=><div key={d.id} style={{padding:12,background:d.tipo==='universal'?'#E8C9A8':d.tipo==='personalizada'?'#D4EDDA':'#EDD9C0',borderRadius:10,display:'flex',gap:10,alignItems:'center'}}><span style={{fontSize:18}}>📅</span><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:'#2C1500'}}>{d.titulo}</div><div style={{fontSize:11,color:'#7A6555'}}>{new Date(d.data+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}</div></div>{d.tipo==='personalizada'&&<button onClick={()=>removerData(d.id)} style={{color:'#B91C1C',fontSize:14}}>X</button>}</div>)}</div>}
+        </div>
+      )}
+
+      {tab==='kanban'&&(
+        <>
+          {aguardando.length>0&&<div className="card" style={{marginBottom:16,borderLeft:'4px solid #1D5FA8'}}><div style={{fontWeight:600,color:'#1D5FA8',marginBottom:8}}>Gerar link de aprovação em lote (até 10)</div><div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:10}}>{aguardando.map(c=><label key={c.id} style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',background:selectedForLote.includes(c.id)?'#DBEAFE':'#FAF3EC',padding:'6px 12px',borderRadius:8,border:'1px solid',borderColor:selectedForLote.includes(c.id)?'#1D5FA8':'#E5D5C5',fontSize:13}}><input type="checkbox" checked={selectedForLote.includes(c.id)} onChange={e=>{if(e.target.checked&&selectedForLote.length<10)setSelectedForLote([...selectedForLote,c.id]);else setSelectedForLote(selectedForLote.filter(id=>id!==c.id));}}/>{c.nome}</label>)}</div><button className="btn btn-primary btn-sm" disabled={selectedForLote.length===0} onClick={gerarLote}>Gerar link ({selectedForLote.length} selecionado{selectedForLote.length!==1?'s':''})</button></div>}
+          <div className="kanban-board">
+            {STATUS_COLS.map(col=>{
+              const colCards=cards.filter(c=>c.status===col.key);
+              const colIdx=STATUS_COLS.findIndex(s=>s.key===col.key);
+              return(
+                <div key={col.key} className="kanban-col" onDragOver={e=>e.preventDefault()} onDrop={()=>onDrop(col.key)}>
+                  <div className="kanban-col-header"><span className="kanban-col-title" style={{color:col.color}}>{col.label}</span><span className="kanban-col-count">{colCards.length}</span></div>
+                  {colCards.map(card=>(
+                    <div key={card.id} className="kanban-card" style={{borderLeftColor:col.color}} draggable onDragStart={()=>onDragStart(card.id)}>
+                      {card.midias?.[0]&&(card.midias[0].tipo==='video'?<video src={card.midias[0].url} style={{width:'100%',height:70,objectFit:'cover',borderRadius:6,marginBottom:6}}/>:<img src={card.midias[0].url} alt="" className="kanban-card-img"/>)}
+                      <div style={{fontSize:13,fontWeight:600,color:'#2C1500',marginBottom:6,cursor:'pointer'}} onClick={()=>{setEditCard(card);setShowCardModal(true);}}>{card.nome}</div>
+                      <div style={{fontSize:11,color:'#7A6555',display:'flex',gap:6,flexWrap:'wrap',marginBottom:6}}>
+                        {card.tipo_conteudo&&<span className="tag" style={{fontSize:10}}>{card.tipo_conteudo}</span>}
+                        {card.data_publicacao&&<span>{new Date(card.data_publicacao).toLocaleDateString('pt-BR')}</span>}
+                      </div>
+                      {card.observacao_cliente&&<div style={{marginTop:4,background:'#FEE2E2',borderRadius:6,padding:6,fontSize:11,color:'#B91C1C'}}>✕ {card.observacao_cliente}</div>}
+                      <div style={{display:'flex',gap:4,marginTop:8,flexWrap:'wrap'}}>
+                        {colIdx<STATUS_COLS.length-1&&<button className="btn btn-outline btn-sm" style={{fontSize:10,padding:'2px 7px'}} onClick={()=>moverCard(card.id,STATUS_COLS[colIdx+1].key)}>→</button>}
+                        {colIdx>0&&<button className="btn btn-outline btn-sm" style={{fontSize:10,padding:'2px 7px'}} onClick={()=>moverCard(card.id,STATUS_COLS[colIdx-1].key)}>←</button>}
+                        <button className="btn btn-outline btn-sm" style={{fontSize:10,padding:'2px 7px'}} onClick={()=>{setEditCard(card);setShowCardModal(true);}}>Ed</button>
+                        <button onClick={()=>deletarCard(card.id)} style={{fontSize:10,padding:'2px 7px',background:'#FEE2E2',color:'#B91C1C',border:'1px solid #FCA5A5',borderRadius:6,cursor:'pointer',fontWeight:500}}>Apagar</button>
+                      </div>
+                    </div>
+                  ))}
+                  <button className="btn btn-outline btn-sm" style={{width:'100%',justifyContent:'center',marginTop:8,fontSize:12}} onClick={()=>{setEditCard({status:col.key,cliente_id:cliente.id});setShowCardModal(true);}}>+ Adicionar</button>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {showCardModal&&<CardModal card={editCard} clienteId={cliente.id} funcionarios={funcionarios} onClose={()=>{setShowCardModal(false);setEditCard(null);}} reload={reload}/>}
+      {showEditCliente&&<ClienteModal cliente={cliente} onClose={()=>setShowEditCliente(false)} reload={reload} funcionarios={funcionarios}/>}
+      {showLoteModal&&<div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowLoteModal(false)}><div className="modal"><div className="modal-header"><h3 style={{fontSize:18,fontWeight:600}}>Link gerado! 🎉</h3><button onClick={()=>setShowLoteModal(false)} style={{fontSize:20,color:'#7A6555'}}>✕</button></div><div className="modal-body"><p style={{fontSize:14,color:'#7A6555',marginBottom:12}}>Copie e envie para o cliente:</p><div style={{background:'#FAF3EC',border:'1px solid #E5D5C5',borderRadius:10,padding:16,wordBreak:'break-all',fontSize:13,color:'#3D1F00',marginBottom:16}}>{loteLink}</div><button className="btn btn-primary" style={{width:'100%',justifyContent:'center'}} onClick={()=>{navigator.clipboard.writeText(loteLink);toast('Link copiado!','success');}}>Copiar link</button></div></div></div>}
+    </div>
+  );
+}
+
+function LinkManager({clienteId,links,setLinks}){
+  const [url,setUrl]=useState('');const [desc,setDesc]=useState('');
+  async function add(){if(!url.trim())return;const {data}=await sb.from('cliente_links').insert({cliente_id:clienteId,url,descricao:desc}).select().single();setLinks([...links,data]);setUrl('');setDesc('');}
+  async function remove(id){await sb.from('cliente_links').delete().eq('id',id);setLinks(links.filter(l=>l.id!==id));}
+  return(
+    <div>
+      {links.map(l=><div key={l.id} style={{display:'flex',gap:10,alignItems:'center',padding:'8px 0',borderBottom:'1px solid #E5D5C5'}}><a href={l.url} target="_blank" rel="noreferrer" style={{flex:1,fontSize:13,color:'#1D5FA8'}}>{l.descricao||l.url}</a><button onClick={()=>remove(l.id)} style={{color:'#B91C1C',fontSize:16}}>✕</button></div>)}
+      <div style={{display:'flex',gap:8,marginTop:12}}><input placeholder="URL" value={url} onChange={e=>setUrl(e.target.value)} style={{flex:2}}/><input placeholder="Descrição" value={desc} onChange={e=>setDesc(e.target.value)} style={{flex:1}}/><button className="btn btn-primary btn-sm" onClick={add}>+</button></div>
+    </div>
+  );
+}
+
+// ─── CARD MODAL ───
+function CardModal({card,clienteId,funcionarios,onClose,reload}){
+  const isEdit=card?.id;
+  const [form,setForm]=useState({nome:card?.nome||'',tipo_conteudo:card?.tipo_conteudo||'post',legenda:card?.legenda||'',data_publicacao:card?.data_publicacao?.split('T')[0]||'',responsavel_id:card?.responsavel_id||'',observacoes_internas:card?.observacoes_internas||'',status:card?.status||'ideia',cliente_id:clienteId});
+  const [midias,setMidias]=useState([]);const [uploading,setUploading]=useState(false);
+  useEffect(()=>{if(isEdit)sb.from('card_midias').select('*').eq('card_id',card.id).then(({data})=>setMidias(data||[]));},[ card?.id]);
+  async function uploadMidia(file){
+    setUploading(true);const ext=file.name.split('.').pop();const path=`cards/${Date.now()}.${ext}`;
+    const {error}=await sb.storage.from('midias').upload(path,file);
+    if(error){toast('Erro no upload','error');setUploading(false);return;}
+    const {data:{publicUrl}}=sb.storage.from('midias').getPublicUrl(path);
+    const tipo=file.type.startsWith('video')?'video':'imagem';
+    if(isEdit){const {data:m}=await sb.from('card_midias').insert({card_id:card.id,url:publicUrl,tipo,nome:file.name}).select().single();setMidias([...midias,m]);}
+    else setMidias([...midias,{url:publicUrl,tipo,nome:file.name,_temp:true}]);
+    setUploading(false);
+  }
+  async function salvar(){
+    if(!form.nome.trim()){toast('Nome obrigatório','error');return;}
+    const payload={...form,data_publicacao:form.data_publicacao?new Date(form.data_publicacao+'T12:00:00').toISOString():null};
+    if(isEdit){await sb.from('cards').update(payload).eq('id',card.id);}
+    else{const {data:novo}=await sb.from('cards').insert(payload).select().single();const temps=midias.filter(m=>m._temp);if(temps.length)await sb.from('card_midias').insert(temps.map((m,i)=>({card_id:novo.id,url:m.url,tipo:m.tipo,nome:m.nome,ordem:i})));}
+    toast('Conteúdo salvo!','success');reload();onClose();
+  }
+  async function removeMidia(id){await sb.from('card_midias').delete().eq('id',id);setMidias(midias.filter(m=>m.id!==id));}
+  return(
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header"><h3 style={{fontSize:18,fontWeight:600}}>{isEdit?'Editar conteúdo':'Novo conteúdo'}</h3><button onClick={onClose} style={{fontSize:20,color:'#7A6555'}}>✕</button></div>
+        <div className="modal-body">
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Conteudo *</label><input value={form.nome} onChange={e=>setForm({...form,nome:e.target.value})} placeholder="Ex: Post dia das mães"/></div>
+            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Tipo</label><select value={form.tipo_conteudo} onChange={e=>setForm({...form,tipo_conteudo:e.target.value})}>{['post','stories','reels','carrossel','video'].map(t=><option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}</select></div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginTop:12}}>
+            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Data de publicação</label><input type="date" value={form.data_publicacao} onChange={e=>setForm({...form,data_publicacao:e.target.value})}/></div>}
+            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Coluna kanban</label><select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>{STATUS_COLS.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></div>
+          </div>
+          <div style={{marginTop:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Responsável</label><select value={form.responsavel_id} onChange={e=>setForm({...form,responsavel_id:e.target.value})}><option value="">Selecione...</option>{funcionarios.map(f=><option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
+          <div style={{marginTop:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Legenda (opcional)</label><textarea value={form.legenda} onChange={e=>setForm({...form,legenda:e.target.value})} placeholder="Texto da publicação..."/></div>
+          <div style={{marginTop:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Observações internas</label><textarea value={form.observacoes_internas} onChange={e=>setForm({...form,observacoes_internas:e.target.value})} placeholder="Notas da equipe (não visíveis ao cliente)"/></div>
+          <div style={{marginTop:12}}>
+            <label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Imagens / Vídeos ({midias.length}/10)</label>
+            {midias.length>0&&<div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}>{midias.map((m,i)=><div key={m.id||i} style={{position:'relative',width:80,height:80}}>{m.tipo==='video'?<video src={m.url} style={{width:80,height:80,objectFit:'cover',borderRadius:8}}/>:<img src={m.url} alt="" style={{width:80,height:80,objectFit:'cover',borderRadius:8}}/>}{m.id&&<button onClick={()=>removeMidia(m.id)} style={{position:'absolute',top:-6,right:-6,background:'#B91C1C',color:'#fff',border:'none',borderRadius:'50%',width:20,height:20,fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>}</div>)}</div>}
+            {midias.length<10&&<label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:'#FAF3EC',border:'2px dashed #E5D5C5',borderRadius:10,padding:14,justifyContent:'center',color:'#7A6555',fontSize:13}}>{uploading?'Enviando...':'+ Adicionar imagem ou vídeo'}<input type="file" accept="image/*,video/*" style={{display:'none'}} onChange={e=>{if(e.target.files[0])uploadMidia(e.target.files[0]);}} disabled={uploading}/></label>}
+          </div>
+        </div>
+        <div className="modal-footer"><button className="btn btn-outline" onClick={onClose}>Cancelar</button><button className="btn btn-primary" onClick={salvar}>Salvar</button></div>
+      </div>
+    </div>
+  );
+}
+
+// ─── CALENDÁRIO ───
+function CalendarioPage({cards,clientes}){
+  const hoje=new Date();const [mes,setMes]=useState(hoje.getMonth());const [ano,setAno]=useState(hoje.getFullYear());
+  const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const diasSem=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const primeiroDia=new Date(ano,mes,1).getDay();const totalDias=new Date(ano,mes+1,0).getDate();
+  const cells=[];for(let i=0;i<primeiroDia;i++)cells.push(null);for(let d=1;d<=totalDias;d++)cells.push(d);
+  const cardsDoMes=cards.filter(c=>{if(!c.data_publicacao)return false;const d=new Date(c.data_publicacao);return d.getMonth()===mes&&d.getFullYear()===ano;});
+  function getCor(cid){return clientes.find(c=>c.id===cid)?.cor||'#8B5A2B';}
+  function getNome(cid){return clientes.find(c=>c.id===cid)?.nome||'';}
+  return(
+    <div>
+      <div className="page-header"><div><div className="page-title">Calendário geral</div><div className="page-sub">Todos os conteúdos programados</div></div><div style={{display:'flex',gap:8,alignItems:'center'}}><button className="btn btn-outline btn-sm" onClick={()=>{if(mes===0){setMes(11);setAno(ano-1);}else setMes(mes-1);}}>←</button><span style={{fontWeight:600,minWidth:140,textAlign:'center'}}>{meses[mes]} {ano}</span><button className="btn btn-outline btn-sm" onClick={()=>{if(mes===11){setMes(0);setAno(ano+1);}else setMes(mes+1);}}>→</button></div></div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,marginBottom:4}}>{diasSem.map(d=><div key={d} style={{textAlign:'center',fontSize:12,fontWeight:600,color:'#7A6555',padding:'8px 0'}}>{d}</div>)}</div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:4}}>{cells.map((dia,i)=>{if(!dia)return<div key={`e${i}`}/>;const isHoje=dia===hoje.getDate()&&mes===hoje.getMonth()&&ano===hoje.getFullYear();const dayCards=cardsDoMes.filter(c=>new Date(c.data_publicacao).getDate()===dia);return(<div key={dia} style={{background:isHoje?'#EDD9C0':'#fff',borderRadius:10,padding:8,minHeight:80,border:`1px solid ${isHoje?'#8B5A2B':'#E5D5C5'}`}}><div style={{fontSize:12,fontWeight:600,color:isHoje?'#3D1F00':'#7A6555',marginBottom:4}}>{dia}</div>{dayCards.slice(0,3).map(c=><div key={c.id} style={{borderRadius:4,padding:'2px 6px',fontSize:10,color:'#fff',marginBottom:2,background:getCor(c.cliente_id),whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} title={`${getNome(c.cliente_id)} — ${c.nome}`}>{c.nome}</div>)}{dayCards.length>3&&<div style={{fontSize:9,color:'#7A6555'}}>+{dayCards.length-3}</div>}</div>);})}</div>
+      <div style={{marginTop:20,display:'flex',gap:12,flexWrap:'wrap'}}>{clientes.map(c=><div key={c.id} style={{display:'flex',alignItems:'center',gap:6,fontSize:13}}><div style={{width:12,height:12,borderRadius:3,background:c.cor||'#8B5A2B'}}/>{c.nome}</div>)}</div>
+    </div>
+  );
+}
+
+
+// ─── EQUIPE ───
+function EquipePage({funcionarios,reload}){
+  const [showModal,setShowModal]=useState(false);const [editFunc,setEditFunc]=useState(null);
+  return(
+    <div>
+      <div className="page-header"><div><div className="page-title">Equipe</div><div className="page-sub">{funcionarios.length} colaboradores</div></div><button className="btn btn-primary" onClick={()=>{setEditFunc(null);setShowModal(true);}}>+ Novo funcionário</button></div>
+      <div className="grid-2">{funcionarios.map(f=><div key={f.id} className="func-card"><div style={{display:'flex',gap:12,alignItems:'center',marginBottom:12}}><div className="func-avatar">{f.nome.charAt(0)}</div><div style={{flex:1}}><div style={{fontWeight:600,color:'#2C1500'}}>{f.nome}</div><div style={{fontSize:13,color:'#7A6555'}}>{f.cargo}</div><div style={{fontSize:12,color:'#A89080'}}>{f.email}</div></div><button className="btn btn-outline btn-sm" onClick={()=>{setEditFunc(f);setShowModal(true);}}>Editar</button></div>{f.observacao?.[0]?.observacao&&<div style={{background:'#FEF3C7',borderRadius:8,padding:10,fontSize:13,color:'#92600A'}}>📝 {f.observacao[0].observacao}</div>}</div>)}</div>
+      {showModal&&<FuncModal func={editFunc} onClose={()=>{setShowModal(false);setEditFunc(null);}} reload={reload}/>}
+    </div>
+  );
+}
+
+function FuncModal({func,onClose,reload}){
+  const [form,setForm]=useState({nome:func?.nome||'',cargo:func?.cargo||'',email:func?.email||''});
+  async function salvar(){if(!form.nome.trim()){toast('Nome obrigatório','error');return;}if(func)await sb.from('funcionarios').update(form).eq('id',func.id);else await sb.from('funcionarios').insert(form);toast('Funcionário salvo!','success');reload();onClose();}
+  return(
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header"><h3 style={{fontSize:18,fontWeight:600}}>{func?'Editar':'Novo'} funcionário</h3><button onClick={onClose} style={{fontSize:20,color:'#7A6555'}}>✕</button></div>
+        <div className="modal-body">
+          <div style={{marginBottom:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Conteudo *</label><input value={form.nome} onChange={e=>setForm({...form,nome:e.target.value})} placeholder="Nome do colaborador"/></div>
+          <div style={{marginBottom:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Cargo</label><input value={form.cargo} onChange={e=>setForm({...form,cargo:e.target.value})} placeholder="Ex: Designer, Social Media"/></div>
+          <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>E-mail</label><input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="email@agencia.com"/></div>
+        </div>
+        <div className="modal-footer"><button className="btn btn-outline" onClick={onClose}>Cancelar</button><button className="btn btn-primary" onClick={salvar}>Salvar</button></div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
