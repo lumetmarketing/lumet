@@ -739,7 +739,7 @@ function ClienteDetalhe({cliente,cards,funcionarios,reload,navTo}){
       </div>
 
       <div className="tabs">
-        {[{k:'kanban',l:'Kanban'},{k:'sobre',l:'Sobre a empresa'},{k:'datas',l:'Datas'},{k:'links',l:'Links'}].map(t=>(
+        {[{k:'kanban',l:'Kanban'},{k:'sobre',l:'Sobre a empresa'},{k:'datas',l:'Datas'},{k:'links',l:'Links'},{k:'relatorio',l:'📊 Relatório IA'}].map(t=>(
           <div key={t.k} className={`tab${tab===t.k?' active':''}`} onClick={()=>setTab(t.k)}>{t.l}</div>
         ))}
       </div>
@@ -853,9 +853,278 @@ function ClienteDetalhe({cliente,cards,funcionarios,reload,navTo}){
         </>
       )}
 
+      {tab==='relatorio'&&<RelatorioIA cliente={cliente}/>}
+
       {showCardModal&&<CardModal card={editCard} clienteId={cliente.id} funcionarios={funcionarios} onClose={()=>{setShowCardModal(false);setEditCard(null);}} reload={reload}/>}
       {showEditCliente&&<ClienteModal cliente={cliente} onClose={()=>setShowEditCliente(false)} reload={reload} funcionarios={funcionarios}/>}
       {showLoteModal&&<div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowLoteModal(false)}><div className="modal"><div className="modal-header"><h3 style={{fontSize:18,fontWeight:600}}>Link gerado! 🎉</h3><button onClick={()=>setShowLoteModal(false)} style={{fontSize:20,color:'#7A6555'}}>✕</button></div><div className="modal-body"><p style={{fontSize:14,color:'#7A6555',marginBottom:12}}>Copie e envie para o cliente:</p><div style={{background:'#FAF3EC',border:'1px solid #E5D5C5',borderRadius:10,padding:16,wordBreak:'break-all',fontSize:13,color:'#3D1F00',marginBottom:16}}>{loteLink}</div><button className="btn btn-primary" style={{width:'100%',justifyContent:'center'}} onClick={()=>{navigator.clipboard.writeText(loteLink);toast('Link copiado!','success');}}>Copiar link</button></div></div></div>}
+    </div>
+  );
+}
+
+// ─── RELATÓRIO IA ───
+function RelatorioIA({cliente}){
+  const [prints,setPrints]=useState([]);
+  const [periodo,setPeriodo]=useState('');
+  const [loading,setLoading]=useState(false);
+  const [relatorio,setRelatorio]=useState(null);
+  const [salvando,setSalvando]=useState(false);
+  const [historico,setHistorico]=useState([]);
+  const [verHist,setVerHist]=useState(false);
+  const [obsManual,setObsManual]=useState('');
+
+  useEffect(()=>{
+    sb.from('relatorios_ia').select('*').eq('cliente_id',cliente.id).order('created_at',{ascending:false}).then(({data})=>setHistorico(data||[]));
+  },[cliente.id]);
+
+  function addPrints(files){
+    const novos=[...prints];
+    for(const f of files){
+      if(novos.length>=10){toast('Máximo 10 prints','error');break;}
+      novos.push({file:f,url:URL.createObjectURL(f),id:Date.now()+Math.random()});
+    }
+    setPrints(novos);
+  }
+  function removerPrint(id){setPrints(prints.filter(p=>p.id!==id));}
+
+  async function toBase64(file){
+    return new Promise((res,rej)=>{
+      const r=new FileReader();
+      r.onload=()=>res(r.result.split(',')[1]);
+      r.onerror=rej;
+      r.readAsDataURL(file);
+    });
+  }
+
+  async function gerarRelatorio(){
+    if(prints.length===0){toast('Adicione pelo menos 1 print','error');return;}
+    setLoading(true);setRelatorio(null);
+    try{
+      const imagens=await Promise.all(prints.map(async p=>{
+        const b64=await toBase64(p.file);
+        const tipo=p.file.type||'image/jpeg';
+        return{type:'image',source:{type:'base64',media_type:tipo,data:b64}};
+      }));
+      const contexto=`Cliente: ${cliente.nome}\nSegmento: ${cliente.segmento||'não informado'}\nTom de voz: ${cliente.tom_de_voz||'não informado'}\nPeríodo: ${periodo||'não informado'}${obsManual?'\nObservações: '+obsManual:''}`;
+      const prompt=`Você é especialista em marketing digital e métricas de Instagram/Meta. Analise os prints e gere um relatório completo.
+
+CONTEXTO DO CLIENTE:
+${contexto}
+
+INSTRUÇÕES:
+- Extraia TODOS os números visíveis: seguidores, alcance, impressões, engajamento, curtidas, comentários, compartilhamentos, salvamentos, visitas ao perfil, cliques, stories views, reels plays, etc.
+- Capture dados de crescimento (ganho/perda de seguidores)
+- Calcule taxa de engajamento quando possível
+- Identifique melhores e piores conteúdos se houver dados
+- Gere insights acionáveis específicos para o segmento do cliente
+
+RESPONDA SOMENTE com este JSON (sem markdown, sem texto fora):
+{"periodo":"string","resumo_executivo":"string 2-3 frases","metricas_principais":[{"nome":"string","valor":"string","variacao":"string ou null","tendencia":"up|down|stable|null"}],"metricas_conteudo":[{"nome":"string","valor":"string","variacao":"string ou null","tendencia":"up|down|stable|null"}],"melhores_conteudos":[{"nome":"string","metrica":"string","valor":"string"}],"insights":["string"],"recomendacoes":["string"],"nota_geral":"Ótimo|Bom|Regular|Precisa melhorar"}`;
+
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:[...imagens,{type:'text',text:prompt}]}]})
+      });
+      const data=await resp.json();
+      const texto=data.content?.map(i=>i.text||'').join('');
+      const clean=texto.replace(/```json|```/g,'').trim();
+      setRelatorio(JSON.parse(clean));
+      toast('Relatório gerado!','success');
+    }catch(e){
+      console.error(e);
+      toast('Erro ao gerar relatório. Verifique os prints.','error');
+    }
+    setLoading(false);
+  }
+
+  async function salvarRelatorio(){
+    if(!relatorio)return;
+    setSalvando(true);
+    const mesRef=periodo||new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    const {data}=await sb.from('relatorios_ia').insert({cliente_id:cliente.id,periodo:relatorio.periodo||mesRef,dados:relatorio,nota_geral:relatorio.nota_geral}).select().single();
+    setHistorico(h=>[data,...h]);
+    toast('Relatório salvo!','success');
+    setSalvando(false);
+  }
+
+  const notaCor={'Ótimo':'#2D7A3A','Bom':'#1D5FA8','Regular':'#92600A','Precisa melhorar':'#B91C1C'};
+  const tendIcon={up:'↑',down:'↓',stable:'→'};
+  const tendCor={up:'#2D7A3A',down:'#B91C1C',stable:'#92600A'};
+
+  return(
+    <div>
+      {/* Header */}
+      <div style={{background:'linear-gradient(135deg,#3D1F00,#6B3A1F)',borderRadius:16,padding:24,marginBottom:20,color:'#fff'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}}>
+          <div>
+            <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>📊 Relatório de Métricas com IA</div>
+            <div style={{fontSize:13,color:'rgba(255,255,255,.7)'}}>Envie prints do Instagram/Meta · A IA extrai e analisa automaticamente</div>
+          </div>
+          <button onClick={()=>setVerHist(!verHist)} className="btn" style={{background:'rgba(255,255,255,.15)',color:'#fff',fontSize:13}}>
+            📁 Histórico ({historico.length})
+          </button>
+        </div>
+      </div>
+
+      {/* Histórico */}
+      {verHist&&(
+        <div className="card" style={{marginBottom:20}}>
+          <div className="section-title">Relatórios salvos</div>
+          {historico.length===0?<p style={{color:'#A89080',fontSize:14}}>Nenhum relatório salvo ainda.</p>:historico.map(h=>(
+            <div key={h.id} style={{display:'flex',gap:12,alignItems:'center',padding:'10px 0',borderBottom:'1px solid #E5D5C5'}}>
+              <span style={{fontSize:20}}>📊</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:600,color:'#2C1500'}}>{h.periodo}</div>
+                <div style={{fontSize:11,color:'#7A6555'}}>{new Date(h.created_at).toLocaleDateString('pt-BR')}</div>
+              </div>
+              {h.nota_geral&&<span style={{fontSize:12,fontWeight:600,padding:'3px 10px',borderRadius:20,background:(notaCor[h.nota_geral]||'#3D1F00')+'22',color:notaCor[h.nota_geral]||'#3D1F00'}}>{h.nota_geral}</span>}
+              <button onClick={()=>{setRelatorio(h.dados);setVerHist(false);}} className="btn btn-outline btn-sm">Ver</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Upload */}
+      <div className="card" style={{marginBottom:20}}>
+        <div className="section-title">1. Envie os prints do Instagram / Meta</div>
+        <div style={{background:'#FEF3C7',borderRadius:10,padding:12,marginBottom:16,fontSize:13,color:'#92600A'}}>
+          💡 <strong>Dica:</strong> Envie prints da tela de Insights do Instagram, Meta Business Suite ou Creator Studio. Quanto mais completos, melhor o relatório.
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+          <div>
+            <label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Período de referência (opcional)</label>
+            <input value={periodo} onChange={e=>setPeriodo(e.target.value)} placeholder="Ex: Abril 2025, Q1 2025..."/>
+          </div>
+          <div>
+            <label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Observações adicionais (opcional)</label>
+            <input value={obsManual} onChange={e=>setObsManual(e.target.value)} placeholder="Ex: campanha de lançamento ativa..."/>
+          </div>
+        </div>
+        {prints.length>0&&(
+          <div style={{display:'flex',flexWrap:'wrap',gap:10,marginBottom:16}}>
+            {prints.map(p=>(
+              <div key={p.id} style={{position:'relative',width:100,height:100}}>
+                <img src={p.url} alt="" style={{width:100,height:100,objectFit:'cover',borderRadius:10,border:'2px solid #E5D5C5'}}/>
+                <button onClick={()=>removerPrint(p.id)} style={{position:'absolute',top:-8,right:-8,background:'#B91C1C',color:'#fff',border:'none',borderRadius:'50%',width:22,height:22,fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700}}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <label style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,cursor:'pointer',background:'#FAF3EC',border:'2px dashed #C8956C',borderRadius:12,padding:24,textAlign:'center'}} onMouseOver={e=>e.currentTarget.style.borderColor='#3D1F00'} onMouseOut={e=>e.currentTarget.style.borderColor='#C8956C'}>
+          <span style={{fontSize:32}}>📸</span>
+          <span style={{fontSize:14,fontWeight:600,color:'#3D1F00'}}>{prints.length===0?'Clique ou arraste os prints aqui':'+ Adicionar mais prints'}</span>
+          <span style={{fontSize:12,color:'#7A6555'}}>PNG, JPG · até 10 imagens</span>
+          <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={e=>addPrints(Array.from(e.target.files))}/>
+        </label>
+        <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',marginTop:16,padding:'14px',fontSize:15,fontWeight:600,opacity:loading?0.7:1}} onClick={gerarRelatorio} disabled={loading||prints.length===0}>
+          {loading?'🔄 Analisando prints com IA...':'✨ Gerar Relatório com IA'}
+        </button>
+      </div>
+
+      {/* Loading */}
+      {loading&&(
+        <div style={{textAlign:'center',padding:40}}>
+          <div style={{fontSize:40,marginBottom:12,display:'inline-block'}}>⚙️</div>
+          <div style={{fontSize:15,fontWeight:600,color:'#3D1F00',marginBottom:6}}>Analisando seus prints...</div>
+          <div style={{fontSize:13,color:'#7A6555'}}>A IA está lendo os dados e gerando o relatório</div>
+        </div>
+      )}
+
+      {/* Resultado */}
+      {relatorio&&!loading&&(
+        <div>
+          {/* Banner nota */}
+          <div style={{background:notaCor[relatorio.nota_geral]||'#3D1F00',borderRadius:16,padding:20,marginBottom:20,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
+            <div>
+              <div style={{color:'rgba(255,255,255,.8)',fontSize:13,marginBottom:4}}>Avaliação geral · {cliente.nome}</div>
+              <div style={{color:'#fff',fontSize:22,fontWeight:700}}>{relatorio.nota_geral}</div>
+              {relatorio.periodo&&<div style={{color:'rgba(255,255,255,.7)',fontSize:12,marginTop:4}}>📅 {relatorio.periodo}</div>}
+            </div>
+            <button onClick={salvarRelatorio} disabled={salvando} className="btn" style={{background:'rgba(255,255,255,.2)',color:'#fff',fontSize:13}}>
+              {salvando?'Salvando...':'💾 Salvar relatório'}
+            </button>
+          </div>
+
+          {/* Resumo */}
+          <div className="card" style={{marginBottom:16,borderLeft:'4px solid #8B5A2B'}}>
+            <div style={{fontSize:13,fontWeight:600,color:'#3D1F00',marginBottom:8}}>📝 Resumo Executivo</div>
+            <p style={{fontSize:14,color:'#2C1500',lineHeight:1.7}}>{relatorio.resumo_executivo}</p>
+          </div>
+
+          {/* Métricas principais */}
+          {relatorio.metricas_principais?.length>0&&(
+            <div style={{marginBottom:16}}>
+              <div className="section-title">Métricas Principais</div>
+              <div className="grid-4" style={{gap:12}}>
+                {relatorio.metricas_principais.map((m,i)=>(
+                  <div key={i} style={{background:'#fff',borderRadius:12,border:'1px solid #E5D5C5',padding:16,borderTop:'3px solid #8B5A2B',boxShadow:'0 1px 3px rgba(61,31,0,.06)'}}>
+                    <div style={{fontSize:11,color:'#7A6555',marginBottom:6,fontWeight:500,textTransform:'uppercase',letterSpacing:.5}}>{m.nome}</div>
+                    <div style={{fontSize:24,fontWeight:700,color:'#3D1F00'}}>{m.valor}</div>
+                    {m.variacao&&<div style={{fontSize:12,color:tendCor[m.tendencia]||'#7A6555',marginTop:4,fontWeight:500}}>{tendIcon[m.tendencia]||''} {m.variacao}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Métricas de conteúdo */}
+          {relatorio.metricas_conteudo?.length>0&&(
+            <div style={{marginBottom:16}}>
+              <div className="section-title">Métricas de Conteúdo</div>
+              <div className="card" style={{padding:0,overflow:'hidden'}}>
+                {relatorio.metricas_conteudo.map((m,i)=>(
+                  <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderBottom:i<relatorio.metricas_conteudo.length-1?'1px solid #E5D5C5':'none',background:i%2===0?'#fff':'#FAF3EC'}}>
+                    <div style={{flex:1,fontSize:13,fontWeight:500,color:'#2C1500'}}>{m.nome}</div>
+                    <div style={{fontSize:16,fontWeight:700,color:'#3D1F00',minWidth:80,textAlign:'right'}}>{m.valor}</div>
+                    {m.variacao&&<div style={{fontSize:12,color:tendCor[m.tendencia]||'#7A6555',fontWeight:500,minWidth:70,textAlign:'right'}}>{tendIcon[m.tendencia]||''} {m.variacao}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Melhores conteúdos */}
+          {relatorio.melhores_conteudos?.length>0&&(
+            <div style={{marginBottom:16}}>
+              <div className="section-title">🏆 Melhores Conteúdos</div>
+              <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                {relatorio.melhores_conteudos.map((c,i)=>(
+                  <div key={i} style={{display:'flex',alignItems:'center',gap:12,background:'#fff',borderRadius:10,border:'1px solid #E5D5C5',padding:'12px 16px',borderLeft:`4px solid ${['#92600A','#3D1F00','#8B5A2B'][i]||'#C8956C'}`}}>
+                    <span style={{fontSize:18,fontWeight:700,color:'#C8956C'}}>#{i+1}</span>
+                    <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:'#2C1500'}}>{c.nome}</div><div style={{fontSize:12,color:'#7A6555'}}>{c.metrica}</div></div>
+                    <div style={{fontSize:16,fontWeight:700,color:'#3D1F00'}}>{c.valor}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Insights e Recomendações */}
+          <div className="grid-2" style={{gap:16,marginBottom:16}}>
+            {relatorio.insights?.length>0&&(
+              <div className="card" style={{borderTop:'3px solid #1D5FA8'}}>
+                <div style={{fontSize:14,fontWeight:600,color:'#1D5FA8',marginBottom:12}}>💡 Insights</div>
+                <ul style={{paddingLeft:16}}>
+                  {relatorio.insights.map((ins,i)=><li key={i} style={{fontSize:13,color:'#2C1500',marginBottom:8,lineHeight:1.6}}>{ins}</li>)}
+                </ul>
+              </div>
+            )}
+            {relatorio.recomendacoes?.length>0&&(
+              <div className="card" style={{borderTop:'3px solid #2D7A3A'}}>
+                <div style={{fontSize:14,fontWeight:600,color:'#2D7A3A',marginBottom:12}}>🎯 Recomendações</div>
+                <ul style={{paddingLeft:16}}>
+                  {relatorio.recomendacoes.map((r,i)=><li key={i} style={{fontSize:13,color:'#2C1500',marginBottom:8,lineHeight:1.6}}>{r}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <button className="btn btn-outline" style={{width:'100%',justifyContent:'center'}} onClick={()=>{setRelatorio(null);setPrints([]);}}>
+            + Gerar novo relatório
+          </button>
+        </div>
+      )}
     </div>
   );
 }
