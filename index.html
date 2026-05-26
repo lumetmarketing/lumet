@@ -81,11 +81,7 @@ textarea{resize:vertical;min-height:80px}
 .editable-field:hover{border-color:var(--brown-light);background:var(--cream)}
 .editable-field.empty{color:var(--gray);font-style:italic}
 .info-box{background:var(--cream2);border-radius:var(--radius);padding:14px;border-left:4px solid var(--brown-light)}
-.arquetipo-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:var(--cream3);color:var(--brown-dark);margin:4px}
-.arquetipo-sel{background:var(--brown-dark);color:#fff}
 .notif-panel{background:var(--white);border-radius:12px;margin:8px 12px;padding:12px;max-height:320px;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.15)}
-.upload-area{border:2px dashed var(--gray-mid);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--gray-light)}
-.upload-area:hover{border-color:var(--brown);background:var(--cream2)}
 .pdf-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--cream2);border-radius:var(--radius);margin-bottom:8px}
 .aprova-page{min-height:100vh;background:linear-gradient(135deg,#3D1F00 0%,#6B3A1F 100%);display:flex;align-items:center;justify-content:center;padding:24px}
 .aprova-card{background:#fff;border-radius:24px;max-width:480px;width:100%;overflow:hidden}
@@ -94,6 +90,9 @@ textarea{resize:vertical;min-height:80px}
 .aprova-btn{padding:16px;border-radius:var(--radius-lg);font-size:18px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:8px;transition:all .2s;cursor:pointer;border:none}
 .aprova-btn-sim{background:var(--green-light);color:var(--green)}.aprova-btn-sim:hover{background:var(--green);color:#fff}
 .aprova-btn-nao{background:var(--red-light);color:var(--red)}.aprova-btn-nao:hover{background:var(--red);color:#fff}
+.ig-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;z-index:2000;padding:16px}
+.ig-phone{width:300px;background:#fff;border-radius:36px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6);border:7px solid #111}
+.ig-feed{overflow-y:auto;max-height:500px;background:#fff}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}.fade-in{animation:fadeIn .22s ease forwards}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--gray-mid);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--brown-light)}@media(max-width:768px){
   .sidebar{width:100%;min-height:auto;position:relative;flex-direction:row;flex-wrap:wrap;padding:8px}
   .sidebar-logo{padding:8px 12px;font-size:14px;border-bottom:none}
@@ -114,23 +113,22 @@ const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const sb=createClient(SUPA_URL,SUPA_KEY);
 const {useState,useEffect,useRef}=React;
 
-const SEGMENTOS=['seguros','odontologia','educação','beleza','alimentação','fitness','pet','juridico','imobiliario','varejo','chef de cozinha','buffet','energia solar','agente de viagens','médico','contadora','gestora de RH','reciclagem e meio ambiente','restaurante','rastreamento de veículos','social media','outro'];
-
+const SEGMENTOS_BASE=['seguros','odontologia','educação','beleza','alimentação','fitness','pet','juridico','imobiliario','varejo','chef de cozinha','buffet','energia solar','agente de viagens','médico','contadora','gestora de RH','reciclagem e meio ambiente','restaurante','rastreamento de veículos','social media','outro'];
 const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 const ARQUETIPOS={
-  'O Herói':{emoji:'⚔️',desc:'Corajoso, determinado e inspirador. A marca Herói supera desafios e motiva as pessoas a serem melhores. Combate o mal e protege os mais fracos. Mensagem central: "Onde há vontade, há um caminho."'},
-  'O Sábio':{emoji:'🦉',desc:'Inteligente, especialista e confiável. A marca Sábia compartilha conhecimento e ajuda as pessoas a entenderem o mundo. Valoriza a verdade acima de tudo. Mensagem central: "O conhecimento liberta."'},
-  'O Explorador':{emoji:'🧭',desc:'Aventureiro, livre e autêntico. A marca Exploradora incentiva descobertas e novas experiências. Rejeita a conformidade e busca autenticidade. Mensagem central: "Não se limite — explore."'},
-  'O Criador':{emoji:'🎨',desc:'Inovador, artístico e visionário. A marca Criadora expressa originalidade e ajuda outros a criarem. Transforma ideias em realidade. Mensagem central: "Se você pode imaginar, pode criar."'},
-  'O Governante':{emoji:'👑',desc:'Líder, responsável e organizador. A marca Governante transmite autoridade, controle e excelência. Cria ordem e garante qualidade. Mensagem central: "Poder não é tudo — é o único."'},
-  'O Prestativo':{emoji:'🤝',desc:'Generoso, cuidadoso e empático. A marca Prestativa existe para servir e ajudar os outros. Coloca as necessidades dos clientes em primeiro lugar. Mensagem central: "Amar ao próximo como a si mesmo."'},
-  'O Amante':{emoji:'❤️',desc:'Apaixonado, sensual e relacional. A marca Amante cria conexões profundas e experiências inesquecíveis. Valoriza beleza, prazer e relacionamentos. Mensagem central: "Só você me faz sentir especial."'},
-  'O Bobo da Corte':{emoji:'🃏',desc:'Divertido, irreverente e espontâneo. A marca Bobo da Corte traz leveza e alegria. Usa humor para conectar e não leva a vida muito a sério. Mensagem central: "Se você não está se divertindo, está fazendo errado."'},
-  'O Homem Comum':{emoji:'🙋',desc:'Autêntico, humilde e próximo das pessoas. A marca Homem Comum é acessível e não se diferencia artificialmente. Pertence ao povo. Mensagem central: "Todos são iguais e merecem o mesmo."'},
-  'O Inocente':{emoji:'🌟',desc:'Otimista, puro e positivo. A marca Inocente acredita no bem e transmite felicidade e simplicidade. Evita conflitos e promove harmonia. Mensagem central: "A vida é boa e tudo vai dar certo."'},
-  'O Fora da Lei':{emoji:'🔥',desc:'Revolucionário, rebelde e disruptivo. A marca Fora da Lei questiona o status quo e desafia convenções. Fala para quem não se encaixa no sistema. Mensagem central: "As regras existem para ser quebradas."'},
-  'O Mago':{emoji:'✨',desc:'Visionário, transformador e carismático. A marca Maga transforma sonhos em realidade e cria experiências extraordinárias. Conhece os segredos do universo. Mensagem central: "Faça seus sonhos se tornarem realidade."'},
+  'O Herói':{emoji:'⚔️',desc:'Corajoso, determinado e inspirador. A marca Herói supera desafios e motiva as pessoas a serem melhores. Mensagem central: "Onde há vontade, há um caminho."'},
+  'O Sábio':{emoji:'🦉',desc:'Inteligente, especialista e confiável. A marca Sábia compartilha conhecimento e ajuda as pessoas a entenderem o mundo. Mensagem central: "O conhecimento liberta."'},
+  'O Explorador':{emoji:'🧭',desc:'Aventureiro, livre e autêntico. A marca Exploradora incentiva descobertas e novas experiências. Mensagem central: "Não se limite — explore."'},
+  'O Criador':{emoji:'🎨',desc:'Inovador, artístico e visionário. A marca Criadora expressa originalidade e ajuda outros a criarem. Mensagem central: "Se você pode imaginar, pode criar."'},
+  'O Governante':{emoji:'👑',desc:'Líder, responsável e organizador. A marca Governante transmite autoridade e excelência. Mensagem central: "Poder não é tudo — é o único."'},
+  'O Prestativo':{emoji:'🤝',desc:'Generoso, cuidadoso e empático. A marca Prestativa existe para servir e ajudar os outros. Mensagem central: "Amar ao próximo como a si mesmo."'},
+  'O Amante':{emoji:'❤️',desc:'Apaixonado, sensual e relacional. A marca Amante cria conexões profundas e experiências inesquecíveis. Mensagem central: "Só você me faz sentir especial."'},
+  'O Bobo da Corte':{emoji:'🃏',desc:'Divertido, irreverente e espontâneo. A marca Bobo da Corte traz leveza e alegria. Mensagem central: "Se você não está se divertindo, está fazendo errado."'},
+  'O Homem Comum':{emoji:'🙋',desc:'Autêntico, humilde e próximo das pessoas. A marca Homem Comum é acessível. Mensagem central: "Todos são iguais e merecem o mesmo."'},
+  'O Inocente':{emoji:'🌟',desc:'Otimista, puro e positivo. A marca Inocente acredita no bem e transmite felicidade. Mensagem central: "A vida é boa e tudo vai dar certo."'},
+  'O Fora da Lei':{emoji:'🔥',desc:'Revolucionário, rebelde e disruptivo. A marca Fora da Lei questiona o status quo. Mensagem central: "As regras existem para ser quebradas."'},
+  'O Mago':{emoji:'✨',desc:'Visionário, transformador e carismático. A marca Maga transforma sonhos em realidade. Mensagem central: "Faça seus sonhos se tornarem realidade."'},
 };
 
 const DATAS_SEGMENTO={
@@ -173,21 +171,18 @@ const STATUS_COLS=[
 
 function toast(msg,type='info'){
   const el=document.createElement('div');
-  el.style.cssText=`position:fixed;top:20px;right:20px;z-index:9999;padding:14px 20px;border-radius:10px;font-size:14px;font-weight:500;color:#fff;background:${type==='error'?'#B91C1C':type==='success'?'#2D7A3A':'#3D1F00'};box-shadow:0 4px 20px rgba(0,0,0,.2);max-width:320px`;
-  el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3500);
+  el.style.cssText=`position:fixed;top:20px;right:20px;z-index:9999;padding:14px 20px;border-radius:10px;font-size:14px;font-weight:500;color:#fff;background:${type==='error'?'#B91C1C':type==='success'?'#2D7A3A':'#3D1F00'};box-shadow:0 4px 20px rgba(0,0,0,.2);max-width:360px`;
+  el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),4000);
 }
 
-// ─── CAMPO EDITÁVEL INLINE ───
-function EditableField({value, onSave, placeholder='Clique para editar...', multiline=true, label}){
+function EditableField({value,onSave,placeholder='Clique para editar...',multiline=true}){
   const [editing,setEditing]=useState(false);
   const [val,setVal]=useState(value||'');
   useEffect(()=>setVal(value||''),[value]);
   async function save(){setEditing(false);if(val!==value)await onSave(val);}
-  if(editing) return(
+  if(editing)return(
     <div>
-      {multiline
-        ?<textarea value={val} onChange={e=>setVal(e.target.value)} autoFocus style={{minHeight:100}} onBlur={save}/>
-        :<input value={val} onChange={e=>setVal(e.target.value)} autoFocus onBlur={save} onKeyDown={e=>e.key==='Enter'&&save()}/>}
+      {multiline?<textarea value={val} onChange={e=>setVal(e.target.value)} autoFocus style={{minHeight:100}} onBlur={save}/>:<input value={val} onChange={e=>setVal(e.target.value)} autoFocus onBlur={save} onKeyDown={e=>e.key==='Enter'&&save()}/>}
       <div style={{display:'flex',gap:8,marginTop:6}}>
         <button className="btn btn-primary btn-sm" onClick={save}>Salvar</button>
         <button className="btn btn-outline btn-sm" onClick={()=>{setEditing(false);setVal(value||'');}}>Cancelar</button>
@@ -196,13 +191,11 @@ function EditableField({value, onSave, placeholder='Clique para editar...', mult
   );
   return(
     <div className={`editable-field${!val?' empty':''}`} onClick={()=>setEditing(true)} title="Clique para editar">
-      {val||placeholder}
-      <span style={{fontSize:11,color:'#C8956C',marginLeft:8,opacity:.7}}>✏</span>
+      {val||placeholder}<span style={{fontSize:11,color:'#C8956C',marginLeft:8,opacity:.7}}>✏</span>
     </div>
   );
 }
 
-// ─── APROVAÇÃO DO CLIENTE ───
 function AprovacaoPage({token}){
   const [cards,setCards]=useState([]);const [lote,setLote]=useState(null);
   const [loading,setLoading]=useState(true);const [reprovandoId,setReprovandoId]=useState(null);const [obs,setObs]=useState('');
@@ -268,7 +261,6 @@ function AprovacaoPage({token}){
   );
 }
 
-// ─── APP ───
 function App(){
   const params=new URLSearchParams(window.location.search);
   const aprovToken=params.get('aprovar');
@@ -281,22 +273,18 @@ function App(){
   const [notifs,setNotifs]=useState([]);
   const [notifUnread,setNotifUnread]=useState(0);
   const [showNotif,setShowNotif]=useState(false);
-
   useEffect(()=>{
     loadAll();
     const ch=sb.channel('rt').on('postgres_changes',{event:'*',schema:'public',table:'notificacoes'},loadNotifs).on('postgres_changes',{event:'*',schema:'public',table:'cards'},loadCards).on('postgres_changes',{event:'*',schema:'public',table:'checklist_items'},loadFuncs).subscribe();
     return()=>sb.removeChannel(ch);
   },[]);
-
   async function loadAll(){loadFuncs();loadClientes();loadCards();loadNotifs();}
   async function loadFuncs(){const {data}=await sb.from('funcionarios').select('*,observacao:funcionario_observacoes(*),checklist:checklist_items(*)').eq('status','ativo');setFuncionarios(data||[]);}
   async function loadClientes(){const {data}=await sb.from('clientes').select('*').eq('status','ativo');setClientes(data||[]);}
   async function loadCards(){const {data}=await sb.from('cards').select('*,midias:card_midias(*)');setCards(data||[]);}
   async function loadNotifs(){const {data}=await sb.from('notificacoes').select('*').order('created_at',{ascending:false}).limit(30);setNotifs(data||[]);setNotifUnread((data||[]).filter(n=>!n.lida).length);}
-
   function navTo(p,cid=null){setPage(p);if(cid)setClienteId(cid);}
   const currentCliente=clientes.find(c=>c.id===clienteId);
-
   return(
     <div style={{display:'flex'}}>
       <Sidebar page={page} navTo={navTo} notifUnread={notifUnread} showNotif={showNotif} setShowNotif={setShowNotif} notifs={notifs} loadNotifs={loadNotifs}/>
@@ -312,7 +300,6 @@ function App(){
   );
 }
 
-// ─── SIDEBAR ───
 function Sidebar({page,navTo,notifUnread,showNotif,setShowNotif,notifs,loadNotifs}){
   const nav=[{key:'dashboard',icon:'DB',label:'Dashboard'},{key:'clientes',icon:'CL',label:'Clientes'},{key:'calendario',icon:'CA',label:'Calendario'},{key:'equipe',icon:'EQ',label:'Equipe'},{key:'processos',icon:'PR',label:'Processos'}];
   async function marcarLidas(){await sb.from('notificacoes').update({lida:true}).eq('lida',false);loadNotifs();}
@@ -331,7 +318,6 @@ function Sidebar({page,navTo,notifUnread,showNotif,setShowNotif,notifs,loadNotif
   );
 }
 
-// ─── DASHBOARD ───
 function Dashboard({funcionarios,clientes,cards,notifs,navTo,reload}){
   const pendentes=cards.filter(c=>c.status==='aguardando').length;
   const aprovados=cards.filter(c=>c.status==='aprovado').length;
@@ -355,138 +341,83 @@ function Dashboard({funcionarios,clientes,cards,notifs,navTo,reload}){
   );
 }
 
-
-// ─── PROCESSOS PAGE ───
+// ── PROCESSOS: prompt = só texto, sem upload de doc ──
 function ProcessosPage(){
   const ETAPAS=[
     {key:'briefing',num:1,titulo:'Briefing',desc:'Formulario e instrucoes para coleta de informacoes do cliente'},
     {key:'arquetipo',num:2,titulo:'Arquetipo',desc:'Guia para identificacao e definicao do arquetipo da marca'},
     {key:'planejamento',num:3,titulo:'Planejamento Estrategico',desc:'Processo e modelo de planejamento estrategico'},
     {key:'conteudo_mensal',num:4,titulo:'Conteudo Mensal',desc:'Template e instrucoes para planejamento mensal de conteudo'},
-    {key:'prompt_relatorio',num:5,titulo:'Prompt para Relatorio de Metricas',desc:'Prompt para gerar relatorios de metricas com IA'},
+    {key:'prompt_relatorio',num:5,titulo:'Prompt para Relatorio de Metricas',desc:'Prompt/descrição para gerar relatórios de métricas com IA'},
   ];
-  const [dados,setDados]=useState({});
-  const [loading,setLoading]=useState(true);
-  const [uploading,setUploading]=useState({});
-  const [expanded,setExpanded]=useState({briefing:true});
-
-  useEffect(()=>{
-    sb.from('processos_conteudo').select('*').then(({data})=>{
-      const d={};(data||[]).forEach(item=>{d[item.etapa_key]=item;});
-      setDados(d);setLoading(false);
-    }).catch(()=>setLoading(false));
-  },[]);
-
+  const [dados,setDados]=useState({});const [loading,setLoading]=useState(true);
+  const [uploading,setUploading]=useState({});const [expanded,setExpanded]=useState({briefing:true});
+  useEffect(()=>{sb.from('processos_conteudo').select('*').then(({data})=>{const d={};(data||[]).forEach(item=>{d[item.etapa_key]=item;});setDados(d);setLoading(false);}).catch(()=>setLoading(false));},[]);
   async function saveTexto(key,texto){
     const ex=dados[key];
     if(ex){await sb.from('processos_conteudo').update({texto,updated_at:new Date().toISOString()}).eq('id',ex.id);}
     else{const {data:r}=await sb.from('processos_conteudo').insert({etapa_key:key,texto}).select().single();if(r)setDados(d=>({...d,[key]:r}));return;}
-    setDados(d=>({...d,[key]:{...d[key],texto}}));
-    toast('Salvo!','success');
+    setDados(d=>({...d,[key]:{...d[key],texto}}));toast('Salvo!','success');
   }
-
   async function uploadDoc(key,file){
     setUploading(u=>({...u,[key]:true}));
-    const ext=file.name.split('.').pop();
-    const path='processos/'+key+'/'+Date.now()+'.'+ext;
+    const ext=file.name.split('.').pop();const path='processos/'+key+'/'+Date.now()+'.'+ext;
     const {error}=await sb.storage.from('midias').upload(path,file);
     if(error){toast('Erro no upload','error');setUploading(u=>({...u,[key]:false}));return;}
     const {data:{publicUrl}}=sb.storage.from('midias').getPublicUrl(path);
-    const ex=dados[key];
-    const docs=[...(ex&&ex.docs?ex.docs:[]),{url:publicUrl,nome:file.name,id:Date.now()}];
+    const ex=dados[key];const docs=[...(ex&&ex.docs?ex.docs:[]),{url:publicUrl,nome:file.name,id:Date.now()}];
     if(ex){await sb.from('processos_conteudo').update({docs}).eq('id',ex.id);}
     else{const {data:r}=await sb.from('processos_conteudo').insert({etapa_key:key,docs}).select().single();if(r)setDados(d=>({...d,[key]:r}));setUploading(u=>({...u,[key]:false}));return;}
-    setDados(d=>({...d,[key]:{...d[key],docs}}));
-    setUploading(u=>({...u,[key]:false}));
-    toast('Enviado!','success');
+    setDados(d=>({...d,[key]:{...d[key],docs}}));setUploading(u=>({...u,[key]:false}));toast('Enviado!','success');
   }
-
   async function removeDoc(key,docId){
-    const ex=dados[key];if(!ex)return;
-    const docs=(ex.docs||[]).filter(d=>d.id!==docId);
-    await sb.from('processos_conteudo').update({docs}).eq('id',ex.id);
-    setDados(d=>({...d,[key]:{...d[key],docs}}));
-    toast('Removido!','success');
+    const ex=dados[key];if(!ex)return;const docs=(ex.docs||[]).filter(d=>d.id!==docId);
+    await sb.from('processos_conteudo').update({docs}).eq('id',ex.id);setDados(d=>({...d,[key]:{...d[key],docs}}));toast('Removido!','success');
   }
-
   if(loading)return React.createElement('div',{style:{padding:40,textAlign:'center',color:'#7A6555',fontSize:14}},'Carregando...');
-
-  return(
-    React.createElement('div',null,
-      React.createElement('div',{className:'page-header'},
-        React.createElement('div',null,
-          React.createElement('div',{className:'page-title'},'Processos'),
-          React.createElement('div',{className:'page-sub'},'Guia interno de etapas para a equipe')
-        )
-      ),
-      ETAPAS.map(etapa=>{
-        const dado=dados[etapa.key]||{};
-        const isOpen=!!expanded[etapa.key];
-        return React.createElement('div',{
-          key:etapa.key,
-          style:{background:'#fff',borderRadius:16,border:'1px solid #E5D5C5',overflow:'hidden',boxShadow:'0 1px 4px rgba(61,31,0,.06)',marginBottom:14}
-        },
-          React.createElement('div',{
-            onClick:()=>setExpanded(e=>({...e,[etapa.key]:!e[etapa.key]})),
-            style:{padding:'18px 22px',display:'flex',alignItems:'center',gap:14,cursor:'pointer',background:'#FAF3EC',borderBottom:isOpen?'1px solid #E5D5C5':'none'}
-          },
-            React.createElement('div',{style:{width:36,height:36,borderRadius:10,background:'#3D1F00',color:'#fff',fontWeight:700,fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},etapa.num),
-            React.createElement('div',{style:{flex:1}},
-              React.createElement('div',{style:{fontWeight:700,color:'#2C1500',fontSize:15}},etapa.titulo),
-              React.createElement('div',{style:{fontSize:12,color:'#7A6555',marginTop:2}},etapa.desc)
-            ),
-            React.createElement('div',{style:{color:'#7A6555',fontSize:14,fontWeight:700,transform:isOpen?'rotate(180deg)':'none',transition:'transform .2s'}},'v')
+  return React.createElement('div',null,
+    React.createElement('div',{className:'page-header'},React.createElement('div',null,React.createElement('div',{className:'page-title'},'Processos'),React.createElement('div',{className:'page-sub'},'Guia interno de etapas para a equipe'))),
+    ETAPAS.map(etapa=>{
+      const dado=dados[etapa.key]||{};const isOpen=!!expanded[etapa.key];const isPrompt=etapa.key==='prompt_relatorio';
+      return React.createElement('div',{key:etapa.key,style:{background:'#fff',borderRadius:16,border:'1px solid #E5D5C5',overflow:'hidden',boxShadow:'0 1px 4px rgba(61,31,0,.06)',marginBottom:14}},
+        React.createElement('div',{onClick:()=>setExpanded(e=>({...e,[etapa.key]:!e[etapa.key]})),style:{padding:'18px 22px',display:'flex',alignItems:'center',gap:14,cursor:'pointer',background:'#FAF3EC',borderBottom:isOpen?'1px solid #E5D5C5':'none'}},
+          React.createElement('div',{style:{width:36,height:36,borderRadius:10,background:'#3D1F00',color:'#fff',fontWeight:700,fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},etapa.num),
+          React.createElement('div',{style:{flex:1}},React.createElement('div',{style:{fontWeight:700,color:'#2C1500',fontSize:15}},etapa.titulo),React.createElement('div',{style:{fontSize:12,color:'#7A6555',marginTop:2}},etapa.desc)),
+          React.createElement('div',{style:{color:'#7A6555',fontSize:14,fontWeight:700,transform:isOpen?'rotate(180deg)':'none',transition:'transform .2s'}},'v')
+        ),
+        isOpen&&React.createElement('div',{style:{padding:24}},
+          React.createElement('div',{style:{marginBottom:16}},
+            React.createElement('label',{style:{display:'block',fontSize:11,fontWeight:700,color:'#7A6555',marginBottom:7,textTransform:'uppercase',letterSpacing:'.05em'}},isPrompt?'Prompt / Descrição':'Conteudo e instrucoes'),
+            isPrompt&&React.createElement('div',{style:{background:'#FEF3C7',borderRadius:8,padding:'8px 12px',marginBottom:8,fontSize:12,color:'#92600A'}},'💡 Descreva aqui o prompt ou instruções para geração de relatórios de métricas com IA.'),
+            React.createElement(EditableField,{value:dado.texto||'',onSave:v=>saveTexto(etapa.key,v),placeholder:isPrompt?'Descreva o prompt ou instruções para relatórios de métricas...':'Clique para adicionar instrucoes desta etapa...'})
           ),
-          isOpen&&React.createElement('div',{style:{padding:24}},
-            React.createElement('div',{style:{marginBottom:16}},
-              React.createElement('label',{style:{display:'block',fontSize:11,fontWeight:700,color:'#7A6555',marginBottom:7,textTransform:'uppercase',letterSpacing:'.05em'}},
-                etapa.key==='prompt_relatorio'?'Prompt':'Conteudo e instrucoes'
-              ),
-              React.createElement(EditableField,{
-                value:dado.texto||'',
-                onSave:v=>saveTexto(etapa.key,v),
-                placeholder:etapa.key==='prompt_relatorio'?'Cole aqui o prompt para gerar relatorios com IA...':'Clique para adicionar instrucoes desta etapa...'
-              })
-            ),
-            React.createElement('div',null,
-              React.createElement('label',{style:{display:'block',fontSize:11,fontWeight:700,color:'#7A6555',marginBottom:7,textTransform:'uppercase',letterSpacing:'.05em'}},'Documentos'),
-              (dado.docs||[]).map(doc=>
-                React.createElement('div',{key:doc.id,style:{display:'flex',alignItems:'center',gap:12,padding:'11px 14px',background:'#F5E6D3',borderRadius:10,marginBottom:8,border:'1px solid #E5D5C5'}},
-                  React.createElement('span',{style:{fontSize:11,fontWeight:700,color:'#3D1F00',background:'#EDD9C0',padding:'3px 8px',borderRadius:6,flexShrink:0}},'DOC'),
-                  React.createElement('a',{href:doc.url,target:'_blank',rel:'noreferrer',style:{flex:1,fontSize:13,color:'#1D5FA8',fontWeight:500}},doc.nome),
-                  React.createElement('button',{onClick:()=>removeDoc(etapa.key,doc.id),style:{color:'#B91C1C',fontWeight:700,fontSize:14,flexShrink:0,cursor:'pointer',border:'none',background:'none'}},'X')
-                )
-              ),
-              React.createElement('label',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:8,cursor:uploading[etapa.key]?'default':'pointer',background:'#FAF3EC',border:'2px dashed #E5D5C5',borderRadius:12,padding:14,color:'#7A6555',fontSize:13,marginTop:8,fontWeight:500}},
-                uploading[etapa.key]?'Enviando...':'+ Adicionar documento',
-                React.createElement('input',{type:'file',accept:'.pdf,image/*,.doc,.docx',style:{display:'none'},disabled:!!uploading[etapa.key],onChange:e=>{if(e.target.files[0])uploadDoc(etapa.key,e.target.files[0]);}})
-              )
+          !isPrompt&&React.createElement('div',null,
+            React.createElement('label',{style:{display:'block',fontSize:11,fontWeight:700,color:'#7A6555',marginBottom:7,textTransform:'uppercase',letterSpacing:'.05em'}},'Documentos'),
+            (dado.docs||[]).map(doc=>React.createElement('div',{key:doc.id,style:{display:'flex',alignItems:'center',gap:12,padding:'11px 14px',background:'#F5E6D3',borderRadius:10,marginBottom:8,border:'1px solid #E5D5C5'}},
+              React.createElement('span',{style:{fontSize:11,fontWeight:700,color:'#3D1F00',background:'#EDD9C0',padding:'3px 8px',borderRadius:6,flexShrink:0}},'DOC'),
+              React.createElement('a',{href:doc.url,target:'_blank',rel:'noreferrer',style:{flex:1,fontSize:13,color:'#1D5FA8',fontWeight:500}},doc.nome),
+              React.createElement('button',{onClick:()=>removeDoc(etapa.key,doc.id),style:{color:'#B91C1C',fontWeight:700,fontSize:14,flexShrink:0,cursor:'pointer',border:'none',background:'none'}},'X')
+            )),
+            React.createElement('label',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:8,cursor:uploading[etapa.key]?'default':'pointer',background:'#FAF3EC',border:'2px dashed #E5D5C5',borderRadius:12,padding:14,color:'#7A6555',fontSize:13,marginTop:8,fontWeight:500}},
+              uploading[etapa.key]?'Enviando...':'+ Adicionar documento',
+              React.createElement('input',{type:'file',accept:'.pdf,image/*,.doc,.docx',style:{display:'none'},disabled:!!uploading[etapa.key],onChange:e=>{if(e.target.files[0])uploadDoc(etapa.key,e.target.files[0]);}})
             )
           )
-        );
-      })
-    )
+        )
+      );
+    })
   );
 }
 
-// ─── PROCESSOS DA AGÊNCIA ───
 function ProcessosAgencia(){
-  const [processos,setProcessos]=useState([]);
-  const [loading,setLoading]=useState(true);
-  const [showModal,setShowModal]=useState(false);
-  const [editando,setEditando]=useState(null);
+  const [processos,setProcessos]=useState([]);const [loading,setLoading]=useState(true);const [showModal,setShowModal]=useState(false);const [editando,setEditando]=useState(null);
   useEffect(()=>{loadProcessos();},[]);
   async function loadProcessos(){const {data}=await sb.from('processos_agencia').select('*').order('ordem',{ascending:true});setProcessos(data||[]);setLoading(false);}
   async function deletar(id){if(!window.confirm('Apagar este processo?'))return;await sb.from('processos_agencia').delete().eq('id',id);loadProcessos();toast('Processo apagado!','success');}
   async function moverOrdem(id,direcao){
-    const idx=processos.findIndex(p=>p.id===id);
-    const troca=processos[idx+direcao];
-    if(!troca)return;
-    const ordemAtual=processos[idx].ordem;
-    const ordemTroca=troca.ordem;
-    await sb.from('processos_agencia').update({ordem:ordemTroca}).eq('id',id);
-    await sb.from('processos_agencia').update({ordem:ordemAtual}).eq('id',troca.id);
-    loadProcessos();
+    const idx=processos.findIndex(p=>p.id===id);const troca=processos[idx+direcao];if(!troca)return;
+    const ordemAtual=processos[idx].ordem;const ordemTroca=troca.ordem;
+    await sb.from('processos_agencia').update({ordem:ordemTroca}).eq('id',id);await sb.from('processos_agencia').update({ordem:ordemAtual}).eq('id',troca.id);loadProcessos();
   }
   if(loading)return<div style={{color:'#7A6555',fontSize:14,padding:16}}>Carregando...</div>;
   return(
@@ -496,11 +427,7 @@ function ProcessosAgencia(){
         <button className="btn btn-primary btn-sm" onClick={()=>{setEditando(null);setShowModal(true);}}>+ Adicionar etapa</button>
       </div>
       {processos.length===0?(
-        <div style={{textAlign:'center',padding:'32px 0',color:'#A89080'}}>
-          <div style={{fontSize:32,marginBottom:8}}>📋</div>
-          <p style={{fontSize:14}}>Nenhuma etapa cadastrada ainda.</p>
-          <p style={{fontSize:13,marginTop:4}}>Clique em "+ Adicionar etapa" para começar.</p>
-        </div>
+        <div style={{textAlign:'center',padding:'32px 0',color:'#A89080'}}><div style={{fontSize:32,marginBottom:8}}>📋</div><p style={{fontSize:14}}>Nenhuma etapa cadastrada ainda.</p></div>
       ):(
         <div style={{display:'flex',flexDirection:'column',gap:10}}>
           {processos.map((p,i)=>(
@@ -513,12 +440,12 @@ function ProcessosAgencia(){
               </div>
               <div style={{display:'flex',gap:4,flexShrink:0,flexDirection:'column'}}>
                 <div style={{display:'flex',gap:4}}>
-                  <button onClick={()=>moverOrdem(p.id,-1)} disabled={i===0} style={{padding:'3px 7px',borderRadius:6,border:'1px solid #E5D5C5',background:'#fff',color:'#7A6555',fontSize:12,cursor:i===0?'default':'pointer',opacity:i===0?.3:1}}>↑</button>
-                  <button onClick={()=>moverOrdem(p.id,1)} disabled={i===processos.length-1} style={{padding:'3px 7px',borderRadius:6,border:'1px solid #E5D5C5',background:'#fff',color:'#7A6555',fontSize:12,cursor:i===processos.length-1?'default':'pointer',opacity:i===processos.length-1?.3:1}}>↓</button>
+                  <button onClick={()=>moverOrdem(p.id,-1)} disabled={i===0} style={{padding:'3px 7px',borderRadius:6,border:'1px solid #E5D5C5',background:'#fff',color:'#7A6555',fontSize:12,opacity:i===0?.3:1}}>↑</button>
+                  <button onClick={()=>moverOrdem(p.id,1)} disabled={i===processos.length-1} style={{padding:'3px 7px',borderRadius:6,border:'1px solid #E5D5C5',background:'#fff',color:'#7A6555',fontSize:12,opacity:i===processos.length-1?.3:1}}>↓</button>
                 </div>
                 <div style={{display:'flex',gap:4}}>
-                  <button onClick={()=>{setEditando(p);setShowModal(true);}} style={{padding:'3px 7px',borderRadius:6,border:'1px solid #E5D5C5',background:'#fff',color:'#92600A',fontSize:12,cursor:'pointer'}}>Ed</button>
-                  <button onClick={()=>deletar(p.id)} style={{padding:'3px 7px',borderRadius:6,border:'1px solid #FCA5A5',background:'#FEE2E2',color:'#B91C1C',fontSize:12,cursor:'pointer'}}>X</button>
+                  <button onClick={()=>{setEditando(p);setShowModal(true);}} style={{padding:'3px 7px',borderRadius:6,border:'1px solid #E5D5C5',background:'#fff',color:'#92600A',fontSize:12}}>Ed</button>
+                  <button onClick={()=>deletar(p.id)} style={{padding:'3px 7px',borderRadius:6,border:'1px solid #FCA5A5',background:'#FEE2E2',color:'#B91C1C',fontSize:12}}>X</button>
                 </div>
               </div>
             </div>
@@ -532,12 +459,7 @@ function ProcessosAgencia(){
 
 function ProcessoModal({processo,onClose,reload,totalProcessos}){
   const [form,setForm]=useState({titulo:processo?.titulo||'',descricao:processo?.descricao||'',link:processo?.link||'',link_label:processo?.link_label||''});
-  async function salvar(){
-    if(!form.titulo.trim()){toast('Titulo obrigatorio','error');return;}
-    if(processo){await sb.from('processos_agencia').update(form).eq('id',processo.id);}
-    else{await sb.from('processos_agencia').insert({...form,ordem:totalProcessos+1});}
-    toast('Etapa salva!','success');reload();onClose();
-  }
+  async function salvar(){if(!form.titulo.trim()){toast('Titulo obrigatorio','error');return;}if(processo){await sb.from('processos_agencia').update(form).eq('id',processo.id);}else{await sb.from('processos_agencia').insert({...form,ordem:totalProcessos+1});}toast('Etapa salva!','success');reload();onClose();}
   return(
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal">
@@ -554,7 +476,7 @@ function ProcessoModal({processo,onClose,reload,totalProcessos}){
   );
 }
 
-// ─── CHECKLIST CARD ───
+// ── CHECKLIST: tarefas vencidas agora têm check e delete ──
 function FuncChecklistCard({func,reload}){
   const [novaTask,setNovaTask]=useState('');const [editingId,setEditingId]=useState(null);const [editText,setEditText]=useState('');
   const [obs,setObs]=useState(func.observacao?.[0]?.observacao||'');const [addingObs,setAddingObs]=useState(false);const [verDias,setVerDias]=useState(false);
@@ -574,7 +496,19 @@ function FuncChecklistCard({func,reload}){
         <div style={{flex:1}}><div style={{fontWeight:600,color:'#2C1500'}}>{func.nome}</div><div style={{fontSize:13,color:'#7A6555'}}>{func.cargo||'Colaborador'}</div><div style={{fontSize:11,color:'#A89080'}}>{new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'})}</div></div>
         <div style={{textAlign:'center',background:'#EDD9C0',borderRadius:8,padding:'6px 10px'}}><div style={{fontSize:18,fontWeight:700,color:'#3D1F00'}}>{concluidas}/{checklistHoje.length}</div><div style={{fontSize:10,color:'#6B3A1F'}}>hoje</div></div>
       </div>
-      {checklistPassado.length>0&&<div style={{background:'#FEE2E2',borderRadius:8,padding:'8px 10px',marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:'#B91C1C',cursor:'pointer',display:'flex',justifyContent:'space-between'}} onClick={()=>setVerDias(!verDias)}>⚠️ {checklistPassado.length} tarefa(s) em atraso {verDias?'▲':'▼'}</div>{verDias&&checklistPassado.map(item=><div key={item.id} style={{fontSize:12,color:'#B91C1C',padding:'4px 0',borderTop:'1px solid #FCA5A5',marginTop:4}}>• {item.titulo} <span style={{color:'#A89080'}}>({new Date(item.data_tarefa+'T12:00').toLocaleDateString('pt-BR')})</span></div>)}</div>}
+      {checklistPassado.length>0&&(
+        <div style={{background:'#FEE2E2',borderRadius:8,padding:'8px 10px',marginBottom:10}}>
+          <div style={{fontSize:12,fontWeight:600,color:'#B91C1C',cursor:'pointer',display:'flex',justifyContent:'space-between'}} onClick={()=>setVerDias(!verDias)}>⚠️ {checklistPassado.length} tarefa(s) em atraso {verDias?'▲':'▼'}</div>
+          {verDias&&checklistPassado.map(item=>(
+            <div key={item.id} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 0',borderTop:'1px solid #FCA5A5',marginTop:4}}>
+              <div className="checklist-check" onClick={()=>toggleTask(item)} style={{borderColor:'#FCA5A5',flexShrink:0}}></div>
+              <span style={{fontSize:12,color:'#B91C1C',flex:1}}>{item.titulo} <span style={{color:'#A89080',fontSize:10}}>({new Date(item.data_tarefa+'T12:00').toLocaleDateString('pt-BR')})</span></span>
+              <button onClick={()=>toggleTask(item)} title="Concluir" style={{background:'#D4EDDA',color:'#2D7A3A',border:'none',borderRadius:6,padding:'2px 8px',fontSize:12,cursor:'pointer',fontWeight:600}}>✓</button>
+              <button onClick={()=>deleteTask(item.id)} title="Apagar" style={{background:'#FEE2E2',color:'#B91C1C',border:'none',borderRadius:6,padding:'2px 8px',fontSize:12,cursor:'pointer',fontWeight:600}}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
       {checklistHoje.length>0&&<div style={{marginBottom:12}}>{checklistHoje.map(item=>(
         <div key={item.id} className="checklist-item">
           <div className={`checklist-check${item.concluido?' done':''}`} onClick={()=>toggleTask(item)}>{item.concluido&&'✓'}</div>
@@ -593,23 +527,60 @@ function FuncChecklistCard({func,reload}){
   );
 }
 
-// ─── CLIENTES ───
+// ── CLIENTES: botão de apagar cliente + todo o kanban ──
 function ClientesPage({clientes,navTo,reload,funcionarios}){
   const [showModal,setShowModal]=useState(false);
+  async function apagarCliente(e,clienteId,nome){
+    e.stopPropagation();
+    if(!window.confirm(`Apagar "${nome}" e TODOS os seus conteúdos do kanban? Esta ação não pode ser desfeita.`))return;
+    try{
+      const {data:cc}=await sb.from('cards').select('id').eq('cliente_id',clienteId);
+      if(cc&&cc.length>0){
+        const ids=cc.map(c=>c.id);
+        await sb.from('card_midias').delete().in('card_id',ids);
+        await sb.from('aprovacao_lote_cards').delete().in('card_id',ids);
+        await sb.from('cards').delete().eq('cliente_id',clienteId);
+      }
+      await sb.from('datas_comemorativas').delete().eq('cliente_id',clienteId);
+      await sb.from('cliente_links').delete().eq('cliente_id',clienteId);
+      await sb.from('cliente_docs').delete().eq('cliente_id',clienteId);
+      await sb.from('clientes').delete().eq('id',clienteId);
+      toast('Cliente apagado!','success');reload();
+    }catch(err){toast('Erro ao apagar. Tente novamente.','error');}
+  }
   return(
     <div>
       <div className="page-header"><div><div className="page-title">Clientes</div><div className="page-sub">{clientes.length} clientes ativos</div></div><button className="btn btn-primary" onClick={()=>setShowModal(true)}>+ Novo cliente</button></div>
-      <div className="grid-3">{clientes.map(c=><div key={c.id} className="client-card" style={{borderTopColor:c.cor||'#8B5A2B'}} onClick={()=>navTo('cliente',c.id)}><div style={{display:'flex',gap:12,alignItems:'center',marginBottom:12}}><div style={{width:44,height:44,borderRadius:10,background:c.cor+'22',color:c.cor,fontWeight:700,fontSize:18,display:'flex',alignItems:'center',justifyContent:'center'}}>{c.nome.charAt(0)}</div><div><div style={{fontWeight:600,color:'#2C1500'}}>{c.nome}</div><div style={{fontSize:12,color:'#7A6555'}}>{c.segmento}</div></div></div>{c.tom_de_voz&&<span className="tag">{c.tom_de_voz}</span>}</div>)}</div>
+      <div className="grid-3">{clientes.map(c=>(
+        <div key={c.id} className="client-card" style={{borderTopColor:c.cor||'#8B5A2B',position:'relative'}} onClick={()=>navTo('cliente',c.id)}>
+          <div style={{display:'flex',gap:12,alignItems:'center',marginBottom:12}}>
+            <div style={{width:44,height:44,borderRadius:10,background:c.cor+'22',color:c.cor,fontWeight:700,fontSize:18,display:'flex',alignItems:'center',justifyContent:'center'}}>{c.nome.charAt(0)}</div>
+            <div style={{flex:1}}><div style={{fontWeight:600,color:'#2C1500'}}>{c.nome}</div><div style={{fontSize:12,color:'#7A6555'}}>{c.segmento}</div></div>
+          </div>
+          {c.tom_de_voz&&<span className="tag">{c.tom_de_voz}</span>}
+          <button onClick={e=>apagarCliente(e,c.id,c.nome)} style={{position:'absolute',top:10,right:10,background:'#FEE2E2',color:'#B91C1C',border:'1px solid #FCA5A5',borderRadius:8,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>🗑 Apagar</button>
+        </div>
+      ))}</div>
       {showModal&&<ClienteModal onClose={()=>setShowModal(false)} reload={reload} funcionarios={funcionarios}/>}
     </div>
   );
 }
 
+// ── CLIENTE MODAL: segmento personalizável ──
 function ClienteModal({onClose,reload,funcionarios,cliente}){
   const [form,setForm]=useState({nome:cliente?.nome||'',segmento:cliente?.segmento||'',tom_de_voz:cliente?.tom_de_voz||'',briefing:cliente?.briefing||'',sobre:cliente?.sobre||'',estrategia:cliente?.estrategia||'',prompt_cliente:cliente?.prompt_cliente||'',arquetipos:cliente?.arquetipos||[],arquetipo_obs:cliente?.arquetipo_obs||'',cor:cliente?.cor||'#8B5A2B',responsavel_id:cliente?.responsavel_id||''});
+  const [segCustom,setSegCustom]=useState(()=>{try{return JSON.parse(localStorage.getItem('lumet_segs_custom')||'[]');}catch{return[];}});
+  const [novoSeg,setNovoSeg]=useState('');const [addSeg,setAddSeg]=useState(false);
+  const todosSegs=[...SEGMENTOS_BASE,...segCustom];
+  function criarSeg(){
+    if(!novoSeg.trim())return;const n=novoSeg.trim().toLowerCase();
+    if(todosSegs.includes(n)){toast('Segmento já existe','error');return;}
+    const novo=[...segCustom,n];setSegCustom(novo);localStorage.setItem('lumet_segs_custom',JSON.stringify(novo));
+    setForm({...form,segmento:n});setNovoSeg('');setAddSeg(false);toast('Segmento criado!','success');
+  }
   async function salvar(){
     if(!form.nome.trim()){toast('Nome obrigatório','error');return;}
-    const payload={...form,arquetipos:form.arquetipos};
+    const payload={...form};
     if(cliente){await sb.from('clientes').update(payload).eq('id',cliente.id);}
     else{
       const {data}=await sb.from('clientes').insert(payload).select().single();
@@ -617,29 +588,38 @@ function ClienteModal({onClose,reload,funcionarios,cliente}){
       const esp=(DATAS_SEGMENTO[seg]||[]).map(d=>({cliente_id:data.id,titulo:d.t,data:`2026-${d.d}`,tipo:'segmento'}));
       const uni=DATAS_UNIVERSAIS.map(d=>({cliente_id:data.id,titulo:d.t,data:`2026-${d.d}`,tipo:'universal'}));
       if(esp.length||uni.length)await sb.from('datas_comemorativas').insert([...uni,...esp]);
+      if(!DATAS_SEGMENTO[seg]&&seg)toast('Segmento novo: adicione as datas comemorativas manualmente na aba Datas do cliente.','info');
     }
     toast('Cliente salvo!','success');reload();onClose();
   }
-  function toggleArquetipo(a){
-    const curr=form.arquetipos||[];
-    if(curr.includes(a))setForm({...form,arquetipos:curr.filter(x=>x!==a)});
-    else if(curr.length<3)setForm({...form,arquetipos:[...curr,a]});
-    else toast('Máximo 3 arquétipos','error');
-  }
+  function toggleArq(a){const curr=form.arquetipos||[];if(curr.includes(a))setForm({...form,arquetipos:curr.filter(x=>x!==a)});else if(curr.length<3)setForm({...form,arquetipos:[...curr,a]});else toast('Máximo 3 arquétipos','error');}
   return(
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal">
         <div className="modal-header"><h3 style={{fontSize:18,fontWeight:600}}>{cliente?'Editar cliente':'Novo cliente'}</h3><button onClick={onClose} style={{fontSize:20,color:'#7A6555'}}>✕</button></div>
         <div className="modal-body">
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
-            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Conteudo *</label><input value={form.nome} onChange={e=>setForm({...form,nome:e.target.value})} placeholder="Ex: Malta Marques Seguros"/></div>
-            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Segmento</label><select value={form.segmento} onChange={e=>setForm({...form,segmento:e.target.value})}><option value="">Selecione...</option>{SEGMENTOS.map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}</select></div>
+            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Nome *</label><input value={form.nome} onChange={e=>setForm({...form,nome:e.target.value})} placeholder="Ex: Malta Marques Seguros"/></div>
+            <div>
+              <label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Segmento</label>
+              <select value={form.segmento} onChange={e=>{if(e.target.value==='__novo__')setAddSeg(true);else{setForm({...form,segmento:e.target.value});setAddSeg(false);}}}>
+                <option value="">Selecione...</option>
+                {todosSegs.map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
+                <option value="__novo__">➕ Adicionar novo segmento...</option>
+              </select>
+              {addSeg&&<div style={{marginTop:8,display:'flex',gap:8}}>
+                <input value={novoSeg} onChange={e=>setNovoSeg(e.target.value)} placeholder="Nome do segmento..." style={{flex:1}} onKeyDown={e=>e.key==='Enter'&&criarSeg()}/>
+                <button className="btn btn-primary btn-sm" onClick={criarSeg}>Criar</button>
+                <button className="btn btn-outline btn-sm" onClick={()=>{setAddSeg(false);setNovoSeg('');}}>✕</button>
+              </div>}
+              {addSeg&&<p style={{fontSize:11,color:'#7A6555',marginTop:4}}>⚠️ Para segmentos novos, adicione datas comemorativas manualmente na aba Datas do cliente.</p>}
+            </div>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginTop:12}}>
             <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Tom de voz</label><select value={form.tom_de_voz} onChange={e=>setForm({...form,tom_de_voz:e.target.value})}><option value="">Selecione...</option>{['Formal','Descontraído','Inspirador','Técnico','Jovem','Profissional','Acolhedor','Divertido'].map(t=><option key={t} value={t}>{t}</option>)}</select></div>
             <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Cor</label><input type="color" value={form.cor} onChange={e=>setForm({...form,cor:e.target.value})} style={{height:42,padding:4}}/></div>
           </div>
-          <div style={{marginTop:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:8}}>Arquétipos (até 3)</label><div style={{display:'flex',flexWrap:'wrap',gap:6}}>{Object.entries(ARQUETIPOS).map(([k,v])=><button key={k} onClick={()=>toggleArquetipo(k)} style={{padding:'5px 12px',borderRadius:20,fontSize:12,fontWeight:500,border:'1.5px solid',borderColor:(form.arquetipos||[]).includes(k)?'#3D1F00':'#E5D5C5',background:(form.arquetipos||[]).includes(k)?'#3D1F00':'#fff',color:(form.arquetipos||[]).includes(k)?'#fff':'#7A6555',cursor:'pointer'}}>{v.emoji} {k}</button>)}</div></div>
+          <div style={{marginTop:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:8}}>Arquétipos (até 3)</label><div style={{display:'flex',flexWrap:'wrap',gap:6}}>{Object.entries(ARQUETIPOS).map(([k,v])=><button key={k} onClick={()=>toggleArq(k)} style={{padding:'5px 12px',borderRadius:20,fontSize:12,fontWeight:500,border:'1.5px solid',borderColor:(form.arquetipos||[]).includes(k)?'#3D1F00':'#E5D5C5',background:(form.arquetipos||[]).includes(k)?'#3D1F00':'#fff',color:(form.arquetipos||[]).includes(k)?'#fff':'#7A6555',cursor:'pointer'}}>{v.emoji} {k}</button>)}</div></div>
           <div style={{marginTop:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Responsável</label><select value={form.responsavel_id} onChange={e=>setForm({...form,responsavel_id:e.target.value})}><option value="">Selecione...</option>{funcionarios.map(f=><option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
         </div>
         <div className="modal-footer"><button className="btn btn-outline" onClick={onClose}>Cancelar</button><button className="btn btn-primary" onClick={salvar}>Salvar cliente</button></div>
@@ -648,7 +628,38 @@ function ClienteModal({onClose,reload,funcionarios,cliente}){
   );
 }
 
-// ─── CLIENTE DETALHE ───
+// ── ARQUÉTIPO EDITOR inline ──
+function ArquetipoEditor({arquetipos,onSalvar,arquetipo_obs,onSalvarObs}){
+  const [editando,setEditando]=useState(false);const [sel,setSel]=useState(arquetipos||[]);
+  useEffect(()=>setSel(arquetipos||[]),[arquetipos]);
+  function toggle(a){if(sel.includes(a))setSel(sel.filter(x=>x!==a));else if(sel.length<3)setSel([...sel,a]);else toast('Máximo 3 arquétipos','error');}
+  async function salvar(){await onSalvar(sel);setEditando(false);}
+  if(arquetipos.length===0&&!editando)return(
+    <div>
+      <div style={{background:'#FEF3C7',borderRadius:10,padding:14,marginBottom:12,display:'flex',gap:10,alignItems:'center'}}>
+        <span style={{fontSize:24}}>🎭</span>
+        <div><div style={{fontWeight:600,color:'#92600A',fontSize:14}}>Arquétipo não cadastrado</div><div style={{fontSize:13,color:'#7A6555'}}>Adicione o arquétipo a qualquer momento</div></div>
+      </div>
+      <button className="btn btn-primary btn-sm" onClick={()=>setEditando(true)}>+ Adicionar arquétipo</button>
+    </div>
+  );
+  if(editando)return(
+    <div>
+      <div style={{marginBottom:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:8}}>Selecione até 3 arquétipos:</label>
+        <div style={{display:'flex',flexWrap:'wrap',gap:6}}>{Object.entries(ARQUETIPOS).map(([k,v])=><button key={k} onClick={()=>toggle(k)} style={{padding:'5px 12px',borderRadius:20,fontSize:12,fontWeight:500,border:'1.5px solid',borderColor:sel.includes(k)?'#3D1F00':'#E5D5C5',background:sel.includes(k)?'#3D1F00':'#fff',color:sel.includes(k)?'#fff':'#7A6555',cursor:'pointer'}}>{v.emoji} {k}</button>)}</div>
+      </div>
+      <div style={{display:'flex',gap:8}}><button className="btn btn-primary btn-sm" onClick={salvar}>Salvar</button><button className="btn btn-outline btn-sm" onClick={()=>{setEditando(false);setSel(arquetipos||[]);}}>Cancelar</button></div>
+    </div>
+  );
+  return(
+    <div>
+      {arquetipos.map(a=>{const info=ARQUETIPOS[a];if(!info)return null;return(<div key={a} style={{background:'#FAF3EC',borderRadius:12,padding:16,marginBottom:12,borderLeft:'4px solid #8B5A2B'}}><div style={{fontSize:16,fontWeight:700,color:'#3D1F00',marginBottom:6}}>{info.emoji} {a}</div><div style={{fontSize:13,color:'#6B3A1F',lineHeight:1.7}}>{info.desc}</div></div>);})}
+      <div style={{marginTop:8,marginBottom:12}}><div style={{fontSize:13,fontWeight:500,color:'#3D1F00',marginBottom:6}}>Observações:</div><EditableField value={arquetipo_obs} onSave={onSalvarObs} placeholder="Clique para adicionar observações..."/></div>
+      <button className="btn btn-outline btn-sm" onClick={()=>{setSel(arquetipos||[]);setEditando(true);}}>✏ Editar arquétipos</button>
+    </div>
+  );
+}
+
 function ClienteDetalhe({cliente,cards,funcionarios,reload,navTo}){
   const [datas,setDatas]=useState([]);const [links,setLinks]=useState([]);
   const [showCardModal,setShowCardModal]=useState(false);const [editCard,setEditCard]=useState(null);
@@ -658,19 +669,15 @@ function ClienteDetalhe({cliente,cards,funcionarios,reload,navTo}){
   const [novaData,setNovaData]=useState({titulo:'',data:''});const [addingData,setAddingData]=useState(false);
   const [estrategias,setEstrategias]=useState([]);const [metricas,setMetricas]=useState([]);
   const [uploadingEst,setUploadingEst]=useState(false);const [uploadingMet,setUploadingMet]=useState(false);
-  const [mesSel,setMesSel]=useState('');
-
+  const [mesSel,setMesSel]=useState('');const [mesSelMet,setMesSelMet]=useState('');
   useEffect(()=>{
     sb.from('datas_comemorativas').select('*').eq('cliente_id',cliente.id).then(({data})=>setDatas(data||[]));
     sb.from('cliente_links').select('*').eq('cliente_id',cliente.id).then(({data})=>setLinks(data||[]));
     sb.from('cliente_docs').select('*').eq('cliente_id',cliente.id).eq('tipo','estrategia').then(({data})=>setEstrategias(data||[]));
     sb.from('cliente_docs').select('*').eq('cliente_id',cliente.id).eq('tipo','metrica').then(({data})=>setMetricas(data||[]));
   },[cliente.id]);
-
-  async function saveField(field,val){
-    await sb.from('clientes').update({[field]:val}).eq('id',cliente.id);
-    toast('Salvo!','success');reload();
-  }
+  async function saveField(field,val){await sb.from('clientes').update({[field]:val}).eq('id',cliente.id);toast('Salvo!','success');reload();}
+  async function salvarArquetipos(novos){await sb.from('clientes').update({arquetipos:novos}).eq('id',cliente.id);toast('Arquétipos salvos!','success');reload();}
   async function uploadDoc(file,tipo,mes=null){
     if(tipo==='estrategia')setUploadingEst(true);else setUploadingMet(true);
     const ext=file.name.split('.').pop();const path=`docs/${cliente.id}/${tipo}/${Date.now()}.${ext}`;
@@ -679,34 +686,13 @@ function ClienteDetalhe({cliente,cards,funcionarios,reload,navTo}){
     const {data:{publicUrl}}=sb.storage.from('midias').getPublicUrl(path);
     const {data:doc}=await sb.from('cliente_docs').insert({cliente_id:cliente.id,tipo,url:publicUrl,nome:file.name,mes}).select().single();
     if(tipo==='estrategia')setEstrategias(e=>[...e,doc]);else setMetricas(m=>[...m,doc]);
-    setUploadingEst(false);setUploadingMet(false);setMesSel('');toast('Arquivo enviado!','success');
+    setUploadingEst(false);setUploadingMet(false);setMesSel('');setMesSelMet('');toast('Arquivo enviado!','success');
   }
-  async function deleteDoc(id,tipo){
-    await sb.from('cliente_docs').delete().eq('id',id);
-    if(tipo==='estrategia')setEstrategias(e=>e.filter(d=>d.id!==id));else setMetricas(m=>m.filter(d=>d.id!==id));
-    toast('Removido!','success');
-  }
-  async function moverCard(cardId,novoStatus){
-    await sb.from('cards').update({status:novoStatus}).eq('id',cardId);
-    if(novoStatus==='publicado')await sb.from('notificacoes').insert({titulo:'Conteúdo publicado!',mensagem:'Um conteúdo foi marcado como publicado.',tipo:'success'});
-    reload();
-  }
+  async function deleteDoc(id,tipo){await sb.from('cliente_docs').delete().eq('id',id);if(tipo==='estrategia')setEstrategias(e=>e.filter(d=>d.id!==id));else setMetricas(m=>m.filter(d=>d.id!==id));toast('Removido!','success');}
+  async function moverCard(cardId,novoStatus){await sb.from('cards').update({status:novoStatus}).eq('id',cardId);if(novoStatus==='publicado')await sb.from('notificacoes').insert({titulo:'Conteúdo publicado!',mensagem:'Um conteúdo foi marcado como publicado.',tipo:'success'});reload();}
   async function deletarCard(cardId){
-    if(!window.confirm('Apagar este card? Esta ação não pode ser desfeita.'))return;
-    try {
-      // 1. Apagar mídias do card
-      await sb.from('card_midias').delete().eq('card_id',cardId);
-      // 2. Apagar referências nos lotes de aprovação
-      await sb.from('aprovacao_lote_cards').delete().eq('card_id',cardId);
-      // 3. Apagar o card em si
-      const {error}=await sb.from('cards').delete().eq('id',cardId);
-      if(error){toast('Erro ao apagar: '+error.message,'error');return;}
-      toast('Card apagado!','success');
-      // 4. Recarregar tudo incluindo calendário
-      await reload();
-    } catch(e){
-      toast('Erro ao apagar card. Tente novamente.','error');
-    }
+    if(!window.confirm('Apagar este card?'))return;
+    try{await sb.from('card_midias').delete().eq('card_id',cardId);await sb.from('aprovacao_lote_cards').delete().eq('card_id',cardId);const {error}=await sb.from('cards').delete().eq('id',cardId);if(error){toast('Erro ao apagar: '+error.message,'error');return;}toast('Card apagado!','success');await reload();}catch(e){toast('Erro ao apagar card.','error');}
   }
   async function gerarLote(){
     if(selectedForLote.length===0){toast('Selecione ao menos 1 conteúdo','error');return;}
@@ -715,19 +701,13 @@ function ClienteDetalhe({cliente,cards,funcionarios,reload,navTo}){
     const link=`${window.location.origin}${window.location.pathname}?aprovar=${lote.token}`;
     setLoteLink(link);setShowLoteModal(true);setSelectedForLote([]);toast('Link gerado!','success');
   }
-  async function addData(){
-    if(!novaData.titulo||!novaData.data){toast('Preencha título e data','error');return;}
-    const {data:d}=await sb.from('datas_comemorativas').insert({cliente_id:cliente.id,titulo:novaData.titulo,data:novaData.data,tipo:'personalizada'}).select().single();
-    setDatas([...datas,d]);setNovaData({titulo:'',data:''});setAddingData(false);toast('Data adicionada!','success');
-  }
+  async function addData(){if(!novaData.titulo||!novaData.data){toast('Preencha título e data','error');return;}const {data:d}=await sb.from('datas_comemorativas').insert({cliente_id:cliente.id,titulo:novaData.titulo,data:novaData.data,tipo:'personalizada'}).select().single();setDatas([...datas,d]);setNovaData({titulo:'',data:''});setAddingData(false);toast('Data adicionada!','success');}
   async function removerData(id){await sb.from('datas_comemorativas').delete().eq('id',id);setDatas(datas.filter(d=>d.id!==id));}
-
   const dragCard=useRef(null);
   function onDragStart(cardId){dragCard.current=cardId;}
   async function onDrop(status){if(dragCard.current){await moverCard(dragCard.current,status);dragCard.current=null;}}
   const aguardando=cards.filter(c=>c.status==='aguardando');
   const arquetipos=Array.isArray(cliente.arquetipos)?cliente.arquetipos:[];
-
   return(
     <div>
       <div style={{display:'flex',gap:12,alignItems:'center',marginBottom:20,flexWrap:'wrap'}}>
@@ -737,94 +717,50 @@ function ClienteDetalhe({cliente,cards,funcionarios,reload,navTo}){
         <button className="btn btn-outline btn-sm" onClick={()=>setShowEditCliente(true)}>✏ Editar</button>
         <button className="btn btn-primary btn-sm" onClick={()=>{setEditCard(null);setShowCardModal(true);}}>+ Conteúdo</button>
       </div>
-
-      <div className="tabs">
-        {[{k:'kanban',l:'Kanban'},{k:'sobre',l:'Sobre a empresa'},{k:'datas',l:'Datas'},{k:'links',l:'Links'},{k:'relatorio',l:'📊 Relatório IA'}].map(t=>(
-          <div key={t.k} className={`tab${tab===t.k?' active':''}`} onClick={()=>setTab(t.k)}>{t.l}</div>
-        ))}
-      </div>
+      <div className="tabs">{[{k:'kanban',l:'Kanban'},{k:'sobre',l:'Sobre a empresa'},{k:'datas',l:'Datas'},{k:'links',l:'Links'}].map(t=><div key={t.k} className={`tab${tab===t.k?' active':''}`} onClick={()=>setTab(t.k)}>{t.l}</div>)}</div>
 
       {tab==='sobre'&&(
         <div style={{display:'flex',flexDirection:'column',gap:16}}>
-          {/* Sobre a empresa */}
           <div className="card"><div className="section-title">Sobre a empresa</div><EditableField value={cliente.sobre} onSave={v=>saveField('sobre',v)} placeholder="Clique para adicionar informações sobre a empresa..."/></div>
-          {/* Briefing */}
           <div className="card"><div className="section-title">Briefing</div><EditableField value={cliente.briefing} onSave={v=>saveField('briefing',v)} placeholder="Clique para adicionar o briefing..."/></div>
-          {/* Arquétipo */}
-          <div className="card">
-            <div className="section-title">Arquétipos</div>
-            {arquetipos.length===0?<p style={{color:'#A89080',fontSize:14}}>Nenhum arquétipo selecionado. Clique em "Editar" para adicionar.</p>:(
-              <div>
-                {arquetipos.map(a=>{
-                  const info=ARQUETIPOS[a];if(!info)return null;
-                  return(
-                    <div key={a} style={{background:'#FAF3EC',borderRadius:12,padding:16,marginBottom:12,borderLeft:'4px solid #8B5A2B'}}>
-                      <div style={{fontSize:16,fontWeight:700,color:'#3D1F00',marginBottom:6}}>{info.emoji} {a}</div>
-                      <div style={{fontSize:13,color:'#6B3A1F',lineHeight:1.7,marginBottom:8}}>{info.desc}</div>
-                    </div>
-                  );
-                })}
-                <div style={{marginTop:8}}><div style={{fontSize:13,fontWeight:500,color:'#3D1F00',marginBottom:6}}>Observações sobre o arquétipo:</div><EditableField value={cliente.arquetipo_obs} onSave={v=>saveField('arquetipo_obs',v)} placeholder="Clique para adicionar observações..."/></div>
-              </div>
-            )}
-          </div>
+          {/* MUDANÇA 2: Arquétipo editável a qualquer momento */}
+          <div className="card"><div className="section-title">Arquétipos</div><ArquetipoEditor arquetipos={arquetipos} onSalvar={salvarArquetipos} arquetipo_obs={cliente.arquetipo_obs} onSalvarObs={v=>saveField('arquetipo_obs',v)}/></div>
           {/* Estratégia Mensal */}
           <div className="card">
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-              <div className="section-title" style={{marginBottom:0}}>Estratégia Mensal</div>
-            </div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}><div className="section-title" style={{marginBottom:0}}>Estratégia Mensal</div></div>
             <div style={{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'flex-end'}}>
               <div style={{flex:1,minWidth:160}}><label style={{display:'block',fontSize:12,fontWeight:500,marginBottom:4}}>Mês</label><select value={mesSel} onChange={e=>setMesSel(e.target.value)}><option value="">Selecione o mês...</option>{MESES.map((m,i)=><option key={i} value={String(i+1).padStart(2,'0')}>{m}</option>)}</select></div>
-              <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:'#FAF3EC',border:'2px dashed #E5D5C5',borderRadius:10,padding:'10px 16px',color:'#7A6555',fontSize:13,whiteSpace:'nowrap'}}>
-                {uploadingEst?'Enviando...':'📎 Upload PDF'}
-                <input type="file" accept=".pdf,image/*" style={{display:'none'}} disabled={!mesSel||uploadingEst} onChange={e=>{if(e.target.files[0]&&mesSel)uploadDoc(e.target.files[0],'estrategia',mesSel);else if(!mesSel)toast('Selecione o mês primeiro','error');}}/>
-              </label>
+              <label style={{display:'flex',alignItems:'center',gap:8,cursor:mesSel&&!uploadingEst?'pointer':'default',background:'#FAF3EC',border:'2px dashed #E5D5C5',borderRadius:10,padding:'10px 16px',color:'#7A6555',fontSize:13,whiteSpace:'nowrap'}}>{uploadingEst?'Enviando...':'📎 Upload PDF'}<input type="file" accept=".pdf,image/*" style={{display:'none'}} disabled={!mesSel||uploadingEst} onChange={e=>{if(e.target.files[0]&&mesSel)uploadDoc(e.target.files[0],'estrategia',mesSel);else if(!mesSel)toast('Selecione o mês primeiro','error');}}/></label>
             </div>
-            {estrategias.length===0?<p style={{color:'#A89080',fontSize:14}}>Nenhuma estratégia enviada ainda.</p>:(
-              <div>{MESES.map((mes,i)=>{
-                const mesStr=String(i+1).padStart(2,'0');
-                const docsDoMes=estrategias.filter(e=>e.mes===mesStr);
-                if(docsDoMes.length===0)return null;
-                return(<div key={mes} style={{marginBottom:12}}><div style={{fontSize:13,fontWeight:600,color:'#3D1F00',marginBottom:6}}>{mes}</div>{docsDoMes.map(d=><div key={d.id} className="pdf-item"><span style={{fontSize:20}}>📄</span><a href={d.url} target="_blank" rel="noreferrer" style={{flex:1,fontSize:13,color:'#1D5FA8',fontWeight:500}}>{d.nome}</a><button onClick={()=>deleteDoc(d.id,'estrategia')} style={{color:'#B91C1C',fontSize:14}}>X</button></div>)}</div>);
-              })}</div>
-            )}
+            {estrategias.length===0?<p style={{color:'#A89080',fontSize:14}}>Nenhuma estratégia enviada ainda.</p>:<div>{MESES.map((mes,i)=>{const ms=String(i+1).padStart(2,'0');const docs=estrategias.filter(e=>e.mes===ms);if(!docs.length)return null;return<div key={mes} style={{marginBottom:12}}><div style={{fontSize:13,fontWeight:600,color:'#3D1F00',marginBottom:6}}>{mes}</div>{docs.map(d=><div key={d.id} className="pdf-item"><span style={{fontSize:20}}>📄</span><a href={d.url} target="_blank" rel="noreferrer" style={{flex:1,fontSize:13,color:'#1D5FA8',fontWeight:500}}>{d.nome}</a><button onClick={()=>deleteDoc(d.id,'estrategia')} style={{color:'#B91C1C',fontSize:14}}>X</button></div>)}</div>;})} </div>}
           </div>
-          {/* Relatório de Métricas */}
+          {/* MUDANÇA 6: Relatório de Métricas com seleção de mês */}
           <div className="card">
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-              <div className="section-title" style={{marginBottom:0}}>Relatório de Métricas</div>
-              <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:'#3D1F00',color:'#fff',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:500}}>
-                {uploadingMet?'Enviando...':'+ Upload relatório'}
-                <input type="file" accept=".pdf,image/*" style={{display:'none'}} disabled={uploadingMet} onChange={e=>{if(e.target.files[0])uploadDoc(e.target.files[0],'metrica');}}/>
-              </label>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}><div className="section-title" style={{marginBottom:0}}>Relatório de Métricas</div></div>
+            <div style={{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'flex-end'}}>
+              <div style={{flex:1,minWidth:160}}><label style={{display:'block',fontSize:12,fontWeight:500,marginBottom:4}}>Mês do relatório</label><select value={mesSelMet} onChange={e=>setMesSelMet(e.target.value)}><option value="">Selecione o mês...</option>{MESES.map((m,i)=><option key={i} value={String(i+1).padStart(2,'0')}>{m}</option>)}</select></div>
+              <label style={{display:'flex',alignItems:'center',gap:8,cursor:mesSelMet&&!uploadingMet?'pointer':'default',background:mesSelMet?'#3D1F00':'#A89080',color:'#fff',borderRadius:10,padding:'10px 16px',fontSize:13,fontWeight:500,whiteSpace:'nowrap',opacity:mesSelMet?1:.7}}>{uploadingMet?'Enviando...':'📊 Upload relatório'}<input type="file" accept=".pdf,image/*" style={{display:'none'}} disabled={!mesSelMet||uploadingMet} onChange={e=>{if(e.target.files[0]&&mesSelMet)uploadDoc(e.target.files[0],'metrica',mesSelMet);else if(!mesSelMet)toast('Selecione o mês primeiro','error');}}/></label>
             </div>
-            {metricas.length===0?<p style={{color:'#A89080',fontSize:14}}>Nenhum relatório enviado ainda. Gere seu relatório no Claude e faça o upload aqui.</p>:metricas.map(d=><div key={d.id} className="pdf-item"><span style={{fontSize:20}}>📊</span><a href={d.url} target="_blank" rel="noreferrer" style={{flex:1,fontSize:13,color:'#1D5FA8',fontWeight:500}}>{d.nome}</a><span style={{fontSize:11,color:'#A89080'}}>{new Date(d.created_at).toLocaleDateString('pt-BR')}</span><button onClick={()=>deleteDoc(d.id,'metrica')} style={{color:'#B91C1C',fontSize:14}}>X</button></div>)}
+            {!mesSelMet&&<p style={{fontSize:12,color:'#A89080',marginBottom:8}}>Selecione o mês para fazer o upload do relatório.</p>}
+            {metricas.length===0?<p style={{color:'#A89080',fontSize:14}}>Nenhum relatório enviado ainda.</p>:<div>{MESES.map((mes,i)=>{const ms=String(i+1).padStart(2,'0');const docs=metricas.filter(m=>m.mes===ms);if(!docs.length)return null;return<div key={mes} style={{marginBottom:12}}><div style={{fontSize:13,fontWeight:600,color:'#3D1F00',marginBottom:6}}>📊 {mes}</div>{docs.map(d=><div key={d.id} className="pdf-item"><span style={{fontSize:20}}>📊</span><a href={d.url} target="_blank" rel="noreferrer" style={{flex:1,fontSize:13,color:'#1D5FA8',fontWeight:500}}>{d.nome}</a><span style={{fontSize:11,color:'#A89080'}}>{new Date(d.created_at).toLocaleDateString('pt-BR')}</span><button onClick={()=>deleteDoc(d.id,'metrica')} style={{color:'#B91C1C',fontSize:14}}>X</button></div>)}</div>;})} </div>}
           </div>
-          {/* Prompt do cliente */}
           <div className="card"><div className="section-title">Prompt do cliente</div><div style={{background:'#FAF3EC',borderRadius:10,padding:4,marginBottom:8}}><p style={{fontSize:12,color:'#7A6555',padding:'4px 8px'}}>💡 Cole aqui o prompt ideal para usar no Claude ao criar conteúdo para este cliente</p></div><EditableField value={cliente.prompt_cliente} onSave={v=>saveField('prompt_cliente',v)} placeholder="Clique para adicionar o prompt ideal para este cliente..."/></div>
         </div>
       )}
-
       {tab==='links'&&<div className="card"><div className="section-title">Links de referência</div><LinkManager clienteId={cliente.id} links={links} setLinks={setLinks}/></div>}
-
       {tab==='datas'&&(
         <div className="card">
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-            <div className="section-title" style={{marginBottom:0}}>Datas comemorativas</div>
-            <button className="btn btn-primary btn-sm" onClick={()=>setAddingData(true)}>+ Adicionar data</button>
-          </div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}><div className="section-title" style={{marginBottom:0}}>Datas comemorativas</div><button className="btn btn-primary btn-sm" onClick={()=>setAddingData(true)}>+ Adicionar data</button></div>
           {addingData&&<div style={{background:'#FAF3EC',borderRadius:10,padding:16,marginBottom:16,display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-end'}}><div style={{flex:2,minWidth:140}}><label style={{fontSize:12,fontWeight:500,display:'block',marginBottom:4}}>Título</label><input value={novaData.titulo} onChange={e=>setNovaData({...novaData,titulo:e.target.value})} placeholder="Ex: Dia do Cliente"/></div><div style={{flex:1,minWidth:120}}><label style={{fontSize:12,fontWeight:500,display:'block',marginBottom:4}}>Data</label><input type="date" value={novaData.data} onChange={e=>setNovaData({...novaData,data:e.target.value})}/></div><button className="btn btn-primary btn-sm" onClick={addData}>Salvar</button><button className="btn btn-outline btn-sm" onClick={()=>setAddingData(false)}>Cancelar</button></div>}
-          {datas.length===0?<p style={{color:'#A89080',fontSize:14}}>Nenhuma data cadastrada.</p>:<div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:10}}>{datas.sort((a,b)=>a.data.localeCompare(b.data)).map(d=><div key={d.id} style={{padding:12,background:d.tipo==='universal'?'#E8C9A8':d.tipo==='personalizada'?'#D4EDDA':'#EDD9C0',borderRadius:10,display:'flex',gap:10,alignItems:'center'}}><span style={{fontSize:18}}>📅</span><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:'#2C1500'}}>{d.titulo}</div><div style={{fontSize:11,color:'#7A6555'}}>{new Date(d.data+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}</div></div>{d.tipo==='personalizada'&&<button onClick={()=>removerData(d.id)} style={{color:'#B91C1C',fontSize:14}}>X</button>}</div>)}</div>}
+          {datas.length===0?<p style={{color:'#A89080',fontSize:14}}>Nenhuma data cadastrada.</p>:<div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:10}}>{datas.sort((a,b)=>a.data.localeCompare(b.data)).map(d=><div key={d.id} style={{padding:12,background:d.tipo==='universal'?'#E8C9A8':d.tipo==='personalizada'?'#D4EDDA':'#EDD9C0',borderRadius:10,display:'flex',gap:10,alignItems:'center'}}><span style={{fontSize:18}}>📅</span><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:'#2C1500'}}>{d.titulo}</div><div style={{fontSize:11,color:'#7A6555'}}>{new Date(d.data+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}</div></div><button onClick={()=>removerData(d.id)} style={{color:'#B91C1C',fontSize:14}}>X</button></div>)}</div>}
         </div>
       )}
-
       {tab==='kanban'&&(
         <>
           {aguardando.length>0&&<div className="card" style={{marginBottom:16,borderLeft:'4px solid #1D5FA8'}}><div style={{fontWeight:600,color:'#1D5FA8',marginBottom:8}}>Gerar link de aprovação em lote (até 10)</div><div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:10}}>{aguardando.map(c=><label key={c.id} style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',background:selectedForLote.includes(c.id)?'#DBEAFE':'#FAF3EC',padding:'6px 12px',borderRadius:8,border:'1px solid',borderColor:selectedForLote.includes(c.id)?'#1D5FA8':'#E5D5C5',fontSize:13}}><input type="checkbox" checked={selectedForLote.includes(c.id)} onChange={e=>{if(e.target.checked&&selectedForLote.length<10)setSelectedForLote([...selectedForLote,c.id]);else setSelectedForLote(selectedForLote.filter(id=>id!==c.id));}}/>{c.nome}</label>)}</div><button className="btn btn-primary btn-sm" disabled={selectedForLote.length===0} onClick={gerarLote}>Gerar link ({selectedForLote.length} selecionado{selectedForLote.length!==1?'s':''})</button></div>}
           <div className="kanban-board">
             {STATUS_COLS.map(col=>{
-              const colCards=cards.filter(c=>c.status===col.key);
-              const colIdx=STATUS_COLS.findIndex(s=>s.key===col.key);
+              const colCards=cards.filter(c=>c.status===col.key);const colIdx=STATUS_COLS.findIndex(s=>s.key===col.key);
               return(
                 <div key={col.key} className="kanban-col" onDragOver={e=>e.preventDefault()} onDrop={()=>onDrop(col.key)}>
                   <div className="kanban-col-header"><span className="kanban-col-title" style={{color:col.color}}>{col.label}</span><span className="kanban-col-count">{colCards.length}</span></div>
@@ -832,10 +768,7 @@ function ClienteDetalhe({cliente,cards,funcionarios,reload,navTo}){
                     <div key={card.id} className="kanban-card" style={{borderLeftColor:col.color}} draggable onDragStart={()=>onDragStart(card.id)}>
                       {card.midias?.[0]&&(card.midias[0].tipo==='video'?<video src={card.midias[0].url} style={{width:'100%',height:70,objectFit:'cover',borderRadius:6,marginBottom:6}}/>:<img src={card.midias[0].url} alt="" className="kanban-card-img"/>)}
                       <div style={{fontSize:13,fontWeight:600,color:'#2C1500',marginBottom:6,cursor:'pointer'}} onClick={()=>{setEditCard(card);setShowCardModal(true);}}>{card.nome}</div>
-                      <div style={{fontSize:11,color:'#7A6555',display:'flex',gap:6,flexWrap:'wrap',marginBottom:6}}>
-                        {card.tipo_conteudo&&<span className="tag" style={{fontSize:10}}>{card.tipo_conteudo}</span>}
-                        {card.data_publicacao&&<span>{new Date(card.data_publicacao).toLocaleDateString('pt-BR')}</span>}
-                      </div>
+                      <div style={{fontSize:11,color:'#7A6555',display:'flex',gap:6,flexWrap:'wrap',marginBottom:6}}>{card.tipo_conteudo&&<span className="tag" style={{fontSize:10}}>{card.tipo_conteudo}</span>}{card.data_publicacao&&<span>{new Date(card.data_publicacao).toLocaleDateString('pt-BR')}</span>}</div>
                       {card.observacao_cliente&&<div style={{marginTop:4,background:'#FEE2E2',borderRadius:6,padding:6,fontSize:11,color:'#B91C1C'}}>✕ {card.observacao_cliente}</div>}
                       <div style={{display:'flex',gap:4,marginTop:8,flexWrap:'wrap'}}>
                         {colIdx<STATUS_COLS.length-1&&<button className="btn btn-outline btn-sm" style={{fontSize:10,padding:'2px 7px'}} onClick={()=>moverCard(card.id,STATUS_COLS[colIdx+1].key)}>→</button>}
@@ -852,279 +785,9 @@ function ClienteDetalhe({cliente,cards,funcionarios,reload,navTo}){
           </div>
         </>
       )}
-
-      {tab==='relatorio'&&<RelatorioIA cliente={cliente}/>}
-
       {showCardModal&&<CardModal card={editCard} clienteId={cliente.id} funcionarios={funcionarios} onClose={()=>{setShowCardModal(false);setEditCard(null);}} reload={reload}/>}
       {showEditCliente&&<ClienteModal cliente={cliente} onClose={()=>setShowEditCliente(false)} reload={reload} funcionarios={funcionarios}/>}
       {showLoteModal&&<div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowLoteModal(false)}><div className="modal"><div className="modal-header"><h3 style={{fontSize:18,fontWeight:600}}>Link gerado! 🎉</h3><button onClick={()=>setShowLoteModal(false)} style={{fontSize:20,color:'#7A6555'}}>✕</button></div><div className="modal-body"><p style={{fontSize:14,color:'#7A6555',marginBottom:12}}>Copie e envie para o cliente:</p><div style={{background:'#FAF3EC',border:'1px solid #E5D5C5',borderRadius:10,padding:16,wordBreak:'break-all',fontSize:13,color:'#3D1F00',marginBottom:16}}>{loteLink}</div><button className="btn btn-primary" style={{width:'100%',justifyContent:'center'}} onClick={()=>{navigator.clipboard.writeText(loteLink);toast('Link copiado!','success');}}>Copiar link</button></div></div></div>}
-    </div>
-  );
-}
-
-// ─── RELATÓRIO IA ───
-function RelatorioIA({cliente}){
-  const [prints,setPrints]=useState([]);
-  const [periodo,setPeriodo]=useState('');
-  const [loading,setLoading]=useState(false);
-  const [relatorio,setRelatorio]=useState(null);
-  const [salvando,setSalvando]=useState(false);
-  const [historico,setHistorico]=useState([]);
-  const [verHist,setVerHist]=useState(false);
-  const [obsManual,setObsManual]=useState('');
-
-  useEffect(()=>{
-    sb.from('relatorios_ia').select('*').eq('cliente_id',cliente.id).order('created_at',{ascending:false}).then(({data})=>setHistorico(data||[]));
-  },[cliente.id]);
-
-  function addPrints(files){
-    const novos=[...prints];
-    for(const f of files){
-      if(novos.length>=10){toast('Máximo 10 prints','error');break;}
-      novos.push({file:f,url:URL.createObjectURL(f),id:Date.now()+Math.random()});
-    }
-    setPrints(novos);
-  }
-  function removerPrint(id){setPrints(prints.filter(p=>p.id!==id));}
-
-  async function toBase64(file){
-    return new Promise((res,rej)=>{
-      const r=new FileReader();
-      r.onload=()=>res(r.result.split(',')[1]);
-      r.onerror=rej;
-      r.readAsDataURL(file);
-    });
-  }
-
-  async function gerarRelatorio(){
-    if(prints.length===0){toast('Adicione pelo menos 1 print','error');return;}
-    setLoading(true);setRelatorio(null);
-    try{
-      const imagens=await Promise.all(prints.map(async p=>{
-        const b64=await toBase64(p.file);
-        const tipo=p.file.type||'image/jpeg';
-        return{type:'image',source:{type:'base64',media_type:tipo,data:b64}};
-      }));
-      const contexto=`Cliente: ${cliente.nome}\nSegmento: ${cliente.segmento||'não informado'}\nTom de voz: ${cliente.tom_de_voz||'não informado'}\nPeríodo: ${periodo||'não informado'}${obsManual?'\nObservações: '+obsManual:''}`;
-      const prompt=`Você é especialista em marketing digital e métricas de Instagram/Meta. Analise os prints e gere um relatório completo.
-
-CONTEXTO DO CLIENTE:
-${contexto}
-
-INSTRUÇÕES:
-- Extraia TODOS os números visíveis: seguidores, alcance, impressões, engajamento, curtidas, comentários, compartilhamentos, salvamentos, visitas ao perfil, cliques, stories views, reels plays, etc.
-- Capture dados de crescimento (ganho/perda de seguidores)
-- Calcule taxa de engajamento quando possível
-- Identifique melhores e piores conteúdos se houver dados
-- Gere insights acionáveis específicos para o segmento do cliente
-
-RESPONDA SOMENTE com este JSON (sem markdown, sem texto fora):
-{"periodo":"string","resumo_executivo":"string 2-3 frases","metricas_principais":[{"nome":"string","valor":"string","variacao":"string ou null","tendencia":"up|down|stable|null"}],"metricas_conteudo":[{"nome":"string","valor":"string","variacao":"string ou null","tendencia":"up|down|stable|null"}],"melhores_conteudos":[{"nome":"string","metrica":"string","valor":"string"}],"insights":["string"],"recomendacoes":["string"],"nota_geral":"Ótimo|Bom|Regular|Precisa melhorar"}`;
-
-      const resp=await fetch('https://api.anthropic.com/v1/messages',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:[...imagens,{type:'text',text:prompt}]}]})
-      });
-      const data=await resp.json();
-      const texto=data.content?.map(i=>i.text||'').join('');
-      const clean=texto.replace(/```json|```/g,'').trim();
-      setRelatorio(JSON.parse(clean));
-      toast('Relatório gerado!','success');
-    }catch(e){
-      console.error(e);
-      toast('Erro ao gerar relatório. Verifique os prints.','error');
-    }
-    setLoading(false);
-  }
-
-  async function salvarRelatorio(){
-    if(!relatorio)return;
-    setSalvando(true);
-    const mesRef=periodo||new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-    const {data}=await sb.from('relatorios_ia').insert({cliente_id:cliente.id,periodo:relatorio.periodo||mesRef,dados:relatorio,nota_geral:relatorio.nota_geral}).select().single();
-    setHistorico(h=>[data,...h]);
-    toast('Relatório salvo!','success');
-    setSalvando(false);
-  }
-
-  const notaCor={'Ótimo':'#2D7A3A','Bom':'#1D5FA8','Regular':'#92600A','Precisa melhorar':'#B91C1C'};
-  const tendIcon={up:'↑',down:'↓',stable:'→'};
-  const tendCor={up:'#2D7A3A',down:'#B91C1C',stable:'#92600A'};
-
-  return(
-    <div>
-      {/* Header */}
-      <div style={{background:'linear-gradient(135deg,#3D1F00,#6B3A1F)',borderRadius:16,padding:24,marginBottom:20,color:'#fff'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}}>
-          <div>
-            <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>📊 Relatório de Métricas com IA</div>
-            <div style={{fontSize:13,color:'rgba(255,255,255,.7)'}}>Envie prints do Instagram/Meta · A IA extrai e analisa automaticamente</div>
-          </div>
-          <button onClick={()=>setVerHist(!verHist)} className="btn" style={{background:'rgba(255,255,255,.15)',color:'#fff',fontSize:13}}>
-            📁 Histórico ({historico.length})
-          </button>
-        </div>
-      </div>
-
-      {/* Histórico */}
-      {verHist&&(
-        <div className="card" style={{marginBottom:20}}>
-          <div className="section-title">Relatórios salvos</div>
-          {historico.length===0?<p style={{color:'#A89080',fontSize:14}}>Nenhum relatório salvo ainda.</p>:historico.map(h=>(
-            <div key={h.id} style={{display:'flex',gap:12,alignItems:'center',padding:'10px 0',borderBottom:'1px solid #E5D5C5'}}>
-              <span style={{fontSize:20}}>📊</span>
-              <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:600,color:'#2C1500'}}>{h.periodo}</div>
-                <div style={{fontSize:11,color:'#7A6555'}}>{new Date(h.created_at).toLocaleDateString('pt-BR')}</div>
-              </div>
-              {h.nota_geral&&<span style={{fontSize:12,fontWeight:600,padding:'3px 10px',borderRadius:20,background:(notaCor[h.nota_geral]||'#3D1F00')+'22',color:notaCor[h.nota_geral]||'#3D1F00'}}>{h.nota_geral}</span>}
-              <button onClick={()=>{setRelatorio(h.dados);setVerHist(false);}} className="btn btn-outline btn-sm">Ver</button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Upload */}
-      <div className="card" style={{marginBottom:20}}>
-        <div className="section-title">1. Envie os prints do Instagram / Meta</div>
-        <div style={{background:'#FEF3C7',borderRadius:10,padding:12,marginBottom:16,fontSize:13,color:'#92600A'}}>
-          💡 <strong>Dica:</strong> Envie prints da tela de Insights do Instagram, Meta Business Suite ou Creator Studio. Quanto mais completos, melhor o relatório.
-        </div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
-          <div>
-            <label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Período de referência (opcional)</label>
-            <input value={periodo} onChange={e=>setPeriodo(e.target.value)} placeholder="Ex: Abril 2025, Q1 2025..."/>
-          </div>
-          <div>
-            <label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Observações adicionais (opcional)</label>
-            <input value={obsManual} onChange={e=>setObsManual(e.target.value)} placeholder="Ex: campanha de lançamento ativa..."/>
-          </div>
-        </div>
-        {prints.length>0&&(
-          <div style={{display:'flex',flexWrap:'wrap',gap:10,marginBottom:16}}>
-            {prints.map(p=>(
-              <div key={p.id} style={{position:'relative',width:100,height:100}}>
-                <img src={p.url} alt="" style={{width:100,height:100,objectFit:'cover',borderRadius:10,border:'2px solid #E5D5C5'}}/>
-                <button onClick={()=>removerPrint(p.id)} style={{position:'absolute',top:-8,right:-8,background:'#B91C1C',color:'#fff',border:'none',borderRadius:'50%',width:22,height:22,fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700}}>✕</button>
-              </div>
-            ))}
-          </div>
-        )}
-        <label style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,cursor:'pointer',background:'#FAF3EC',border:'2px dashed #C8956C',borderRadius:12,padding:24,textAlign:'center'}} onMouseOver={e=>e.currentTarget.style.borderColor='#3D1F00'} onMouseOut={e=>e.currentTarget.style.borderColor='#C8956C'}>
-          <span style={{fontSize:32}}>📸</span>
-          <span style={{fontSize:14,fontWeight:600,color:'#3D1F00'}}>{prints.length===0?'Clique ou arraste os prints aqui':'+ Adicionar mais prints'}</span>
-          <span style={{fontSize:12,color:'#7A6555'}}>PNG, JPG · até 10 imagens</span>
-          <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={e=>addPrints(Array.from(e.target.files))}/>
-        </label>
-        <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',marginTop:16,padding:'14px',fontSize:15,fontWeight:600,opacity:loading?0.7:1}} onClick={gerarRelatorio} disabled={loading||prints.length===0}>
-          {loading?'🔄 Analisando prints com IA...':'✨ Gerar Relatório com IA'}
-        </button>
-      </div>
-
-      {/* Loading */}
-      {loading&&(
-        <div style={{textAlign:'center',padding:40}}>
-          <div style={{fontSize:40,marginBottom:12,display:'inline-block'}}>⚙️</div>
-          <div style={{fontSize:15,fontWeight:600,color:'#3D1F00',marginBottom:6}}>Analisando seus prints...</div>
-          <div style={{fontSize:13,color:'#7A6555'}}>A IA está lendo os dados e gerando o relatório</div>
-        </div>
-      )}
-
-      {/* Resultado */}
-      {relatorio&&!loading&&(
-        <div>
-          {/* Banner nota */}
-          <div style={{background:notaCor[relatorio.nota_geral]||'#3D1F00',borderRadius:16,padding:20,marginBottom:20,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
-            <div>
-              <div style={{color:'rgba(255,255,255,.8)',fontSize:13,marginBottom:4}}>Avaliação geral · {cliente.nome}</div>
-              <div style={{color:'#fff',fontSize:22,fontWeight:700}}>{relatorio.nota_geral}</div>
-              {relatorio.periodo&&<div style={{color:'rgba(255,255,255,.7)',fontSize:12,marginTop:4}}>📅 {relatorio.periodo}</div>}
-            </div>
-            <button onClick={salvarRelatorio} disabled={salvando} className="btn" style={{background:'rgba(255,255,255,.2)',color:'#fff',fontSize:13}}>
-              {salvando?'Salvando...':'💾 Salvar relatório'}
-            </button>
-          </div>
-
-          {/* Resumo */}
-          <div className="card" style={{marginBottom:16,borderLeft:'4px solid #8B5A2B'}}>
-            <div style={{fontSize:13,fontWeight:600,color:'#3D1F00',marginBottom:8}}>📝 Resumo Executivo</div>
-            <p style={{fontSize:14,color:'#2C1500',lineHeight:1.7}}>{relatorio.resumo_executivo}</p>
-          </div>
-
-          {/* Métricas principais */}
-          {relatorio.metricas_principais?.length>0&&(
-            <div style={{marginBottom:16}}>
-              <div className="section-title">Métricas Principais</div>
-              <div className="grid-4" style={{gap:12}}>
-                {relatorio.metricas_principais.map((m,i)=>(
-                  <div key={i} style={{background:'#fff',borderRadius:12,border:'1px solid #E5D5C5',padding:16,borderTop:'3px solid #8B5A2B',boxShadow:'0 1px 3px rgba(61,31,0,.06)'}}>
-                    <div style={{fontSize:11,color:'#7A6555',marginBottom:6,fontWeight:500,textTransform:'uppercase',letterSpacing:.5}}>{m.nome}</div>
-                    <div style={{fontSize:24,fontWeight:700,color:'#3D1F00'}}>{m.valor}</div>
-                    {m.variacao&&<div style={{fontSize:12,color:tendCor[m.tendencia]||'#7A6555',marginTop:4,fontWeight:500}}>{tendIcon[m.tendencia]||''} {m.variacao}</div>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Métricas de conteúdo */}
-          {relatorio.metricas_conteudo?.length>0&&(
-            <div style={{marginBottom:16}}>
-              <div className="section-title">Métricas de Conteúdo</div>
-              <div className="card" style={{padding:0,overflow:'hidden'}}>
-                {relatorio.metricas_conteudo.map((m,i)=>(
-                  <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderBottom:i<relatorio.metricas_conteudo.length-1?'1px solid #E5D5C5':'none',background:i%2===0?'#fff':'#FAF3EC'}}>
-                    <div style={{flex:1,fontSize:13,fontWeight:500,color:'#2C1500'}}>{m.nome}</div>
-                    <div style={{fontSize:16,fontWeight:700,color:'#3D1F00',minWidth:80,textAlign:'right'}}>{m.valor}</div>
-                    {m.variacao&&<div style={{fontSize:12,color:tendCor[m.tendencia]||'#7A6555',fontWeight:500,minWidth:70,textAlign:'right'}}>{tendIcon[m.tendencia]||''} {m.variacao}</div>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Melhores conteúdos */}
-          {relatorio.melhores_conteudos?.length>0&&(
-            <div style={{marginBottom:16}}>
-              <div className="section-title">🏆 Melhores Conteúdos</div>
-              <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                {relatorio.melhores_conteudos.map((c,i)=>(
-                  <div key={i} style={{display:'flex',alignItems:'center',gap:12,background:'#fff',borderRadius:10,border:'1px solid #E5D5C5',padding:'12px 16px',borderLeft:`4px solid ${['#92600A','#3D1F00','#8B5A2B'][i]||'#C8956C'}`}}>
-                    <span style={{fontSize:18,fontWeight:700,color:'#C8956C'}}>#{i+1}</span>
-                    <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:'#2C1500'}}>{c.nome}</div><div style={{fontSize:12,color:'#7A6555'}}>{c.metrica}</div></div>
-                    <div style={{fontSize:16,fontWeight:700,color:'#3D1F00'}}>{c.valor}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Insights e Recomendações */}
-          <div className="grid-2" style={{gap:16,marginBottom:16}}>
-            {relatorio.insights?.length>0&&(
-              <div className="card" style={{borderTop:'3px solid #1D5FA8'}}>
-                <div style={{fontSize:14,fontWeight:600,color:'#1D5FA8',marginBottom:12}}>💡 Insights</div>
-                <ul style={{paddingLeft:16}}>
-                  {relatorio.insights.map((ins,i)=><li key={i} style={{fontSize:13,color:'#2C1500',marginBottom:8,lineHeight:1.6}}>{ins}</li>)}
-                </ul>
-              </div>
-            )}
-            {relatorio.recomendacoes?.length>0&&(
-              <div className="card" style={{borderTop:'3px solid #2D7A3A'}}>
-                <div style={{fontSize:14,fontWeight:600,color:'#2D7A3A',marginBottom:12}}>🎯 Recomendações</div>
-                <ul style={{paddingLeft:16}}>
-                  {relatorio.recomendacoes.map((r,i)=><li key={i} style={{fontSize:13,color:'#2C1500',marginBottom:8,lineHeight:1.6}}>{r}</li>)}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          <button className="btn btn-outline" style={{width:'100%',justifyContent:'center'}} onClick={()=>{setRelatorio(null);setPrints([]);}}>
-            + Gerar novo relatório
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -1141,29 +804,13 @@ function LinkManager({clienteId,links,setLinks}){
   );
 }
 
-// ─── CARD MODAL ───
 function CardModal({card,clienteId,funcionarios,onClose,reload}){
   const isEdit=card?.id;
   const [form,setForm]=useState({nome:card?.nome||'',tipo_conteudo:card?.tipo_conteudo||'post',legenda:card?.legenda||'',data_publicacao:card?.data_publicacao?.split('T')[0]||'',responsavel_id:card?.responsavel_id||'',observacoes_internas:card?.observacoes_internas||'',status:card?.status||'ideia',cliente_id:clienteId});
   const [midias,setMidias]=useState([]);const [uploading,setUploading]=useState(false);
   useEffect(()=>{if(isEdit)sb.from('card_midias').select('*').eq('card_id',card.id).then(({data})=>setMidias(data||[]));},[ card?.id]);
-  async function uploadMidia(file){
-    setUploading(true);const ext=file.name.split('.').pop();const path=`cards/${Date.now()}.${ext}`;
-    const {error}=await sb.storage.from('midias').upload(path,file);
-    if(error){toast('Erro no upload','error');setUploading(false);return;}
-    const {data:{publicUrl}}=sb.storage.from('midias').getPublicUrl(path);
-    const tipo=file.type.startsWith('video')?'video':'imagem';
-    if(isEdit){const {data:m}=await sb.from('card_midias').insert({card_id:card.id,url:publicUrl,tipo,nome:file.name}).select().single();setMidias([...midias,m]);}
-    else setMidias([...midias,{url:publicUrl,tipo,nome:file.name,_temp:true}]);
-    setUploading(false);
-  }
-  async function salvar(){
-    if(!form.nome.trim()){toast('Nome obrigatório','error');return;}
-    const payload={...form,data_publicacao:form.data_publicacao?new Date(form.data_publicacao+'T12:00:00').toISOString():null};
-    if(isEdit){await sb.from('cards').update(payload).eq('id',card.id);}
-    else{const {data:novo}=await sb.from('cards').insert(payload).select().single();const temps=midias.filter(m=>m._temp);if(temps.length)await sb.from('card_midias').insert(temps.map((m,i)=>({card_id:novo.id,url:m.url,tipo:m.tipo,nome:m.nome,ordem:i})));}
-    toast('Conteúdo salvo!','success');reload();onClose();
-  }
+  async function uploadMidia(file){setUploading(true);const ext=file.name.split('.').pop();const path=`cards/${Date.now()}.${ext}`;const {error}=await sb.storage.from('midias').upload(path,file);if(error){toast('Erro no upload','error');setUploading(false);return;}const {data:{publicUrl}}=sb.storage.from('midias').getPublicUrl(path);const tipo=file.type.startsWith('video')?'video':'imagem';if(isEdit){const {data:m}=await sb.from('card_midias').insert({card_id:card.id,url:publicUrl,tipo,nome:file.name}).select().single();setMidias([...midias,m]);}else setMidias([...midias,{url:publicUrl,tipo,nome:file.name,_temp:true}]);setUploading(false);}
+  async function salvar(){if(!form.nome.trim()){toast('Nome obrigatório','error');return;}const payload={...form,data_publicacao:form.data_publicacao?new Date(form.data_publicacao+'T12:00:00').toISOString():null};if(isEdit){await sb.from('cards').update(payload).eq('id',card.id);}else{const {data:novo}=await sb.from('cards').insert(payload).select().single();const temps=midias.filter(m=>m._temp);if(temps.length)await sb.from('card_midias').insert(temps.map((m,i)=>({card_id:novo.id,url:m.url,tipo:m.tipo,nome:m.nome,ordem:i})));}toast('Conteúdo salvo!','success');reload();onClose();}
   async function removeMidia(id){await sb.from('card_midias').delete().eq('id',id);setMidias(midias.filter(m=>m.id!==id));}
   return(
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
@@ -1171,11 +818,11 @@ function CardModal({card,clienteId,funcionarios,onClose,reload}){
         <div className="modal-header"><h3 style={{fontSize:18,fontWeight:600}}>{isEdit?'Editar conteúdo':'Novo conteúdo'}</h3><button onClick={onClose} style={{fontSize:20,color:'#7A6555'}}>✕</button></div>
         <div className="modal-body">
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
-            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Conteudo *</label><input value={form.nome} onChange={e=>setForm({...form,nome:e.target.value})} placeholder="Ex: Post dia das mães"/></div>
+            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Nome *</label><input value={form.nome} onChange={e=>setForm({...form,nome:e.target.value})} placeholder="Ex: Post dia das mães"/></div>
             <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Tipo</label><select value={form.tipo_conteudo} onChange={e=>setForm({...form,tipo_conteudo:e.target.value})}>{['post','stories','reels','carrossel','video'].map(t=><option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}</select></div>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginTop:12}}>
-            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Data de publicação</label><input type="date" value={form.data_publicacao} onChange={e=>setForm({...form,data_publicacao:e.target.value})}/></div>}
+            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Data de publicação</label><input type="date" value={form.data_publicacao} onChange={e=>setForm({...form,data_publicacao:e.target.value})}/></div>
             <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Coluna kanban</label><select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>{STATUS_COLS.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></div>
           </div>
           <div style={{marginTop:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Responsável</label><select value={form.responsavel_id} onChange={e=>setForm({...form,responsavel_id:e.target.value})}><option value="">Selecione...</option>{funcionarios.map(f=><option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
@@ -1193,28 +840,84 @@ function CardModal({card,clienteId,funcionarios,onClose,reload}){
   );
 }
 
-// ─── CALENDÁRIO ───
+// ── CALENDÁRIO: preview estilo Instagram ao clicar ──
 function CalendarioPage({cards,clientes}){
   const hoje=new Date();const [mes,setMes]=useState(hoje.getMonth());const [ano,setAno]=useState(hoje.getFullYear());
-  const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const [previewCard,setPreviewCard]=useState(null);
+  const mesesNome=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   const diasSem=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
   const primeiroDia=new Date(ano,mes,1).getDay();const totalDias=new Date(ano,mes+1,0).getDate();
   const cells=[];for(let i=0;i<primeiroDia;i++)cells.push(null);for(let d=1;d<=totalDias;d++)cells.push(d);
   const cardsDoMes=cards.filter(c=>{if(!c.data_publicacao)return false;const d=new Date(c.data_publicacao);return d.getMonth()===mes&&d.getFullYear()===ano;});
   function getCor(cid){return clientes.find(c=>c.id===cid)?.cor||'#8B5A2B';}
   function getNome(cid){return clientes.find(c=>c.id===cid)?.nome||'';}
+
+  function IGPreview({card,onClose}){
+    const cor=getCor(card.cliente_id);const nomeCliente=getNome(card.cliente_id);
+    const midia=card.midias?.[0];
+    return(
+      <div className="ig-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:14}}>
+          <div style={{color:'#fff',fontSize:13,fontWeight:500,opacity:.8}}>📱 Preview — como ficará no Instagram</div>
+          <div className="ig-phone">
+            <div style={{background:'#fff',padding:'6px 14px',display:'flex',justifyContent:'space-between',fontSize:11,fontWeight:700}}><span>9:41</span><span style={{letterSpacing:2}}>●●●</span></div>
+            <div style={{background:'#fff',padding:'8px 14px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid #efefef'}}>
+              <span style={{fontFamily:'Georgia,serif',fontSize:18,fontWeight:700,letterSpacing:-1}}>Instagram</span>
+              <span style={{fontSize:18}}>♡ 🔔</span>
+            </div>
+            <div className="ig-feed">
+              <div style={{padding:'10px 12px',display:'flex',alignItems:'center',gap:8,background:'#fff'}}>
+                <div style={{width:32,height:32,borderRadius:'50%',background:cor,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:13,flexShrink:0}}>{nomeCliente.charAt(0)||'?'}</div>
+                <div style={{flex:1}}><div style={{fontWeight:600,fontSize:12,color:'#000'}}>{nomeCliente||'Conta'}</div><div style={{fontSize:10,color:'#888'}}>Agora</div></div>
+                <span style={{fontSize:16,color:'#888'}}>•••</span>
+              </div>
+              {midia&&midia.tipo!=='video'?<img src={midia.url} alt="post" style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}}/>:midia&&midia.tipo==='video'?<video src={midia.url} style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}} muted autoPlay loop/>:<div style={{width:'100%',aspectRatio:'1',background:`linear-gradient(135deg,${cor}33,${cor}77)`,display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:8}}><span style={{fontSize:40}}>🖼</span><span style={{fontSize:11,color:cor,fontWeight:600}}>Sem imagem</span></div>}
+              <div style={{padding:'10px 14px',display:'flex',gap:14,fontSize:20,background:'#fff'}}>
+                <span>🤍</span><span>💬</span><span>✈️</span><span style={{marginLeft:'auto'}}>🔖</span>
+              </div>
+              <div style={{padding:'0 14px',fontWeight:700,fontSize:12,color:'#000'}}>1.247 curtidas</div>
+              <div style={{padding:'4px 14px 8px',fontSize:12,color:'#000',lineHeight:1.5}}>
+                <strong>{nomeCliente||'Conta'} </strong>{card.legenda||card.nome}
+              </div>
+              {card.tipo_conteudo&&<div style={{padding:'0 14px 10px'}}><span style={{background:cor+'22',color:cor,padding:'2px 8px',borderRadius:20,fontSize:10,fontWeight:600}}>#{card.tipo_conteudo}</span></div>}
+              {card.data_publicacao&&<div style={{padding:'0 14px 12px',fontSize:10,color:'#888',textTransform:'uppercase'}}>{new Date(card.data_publicacao).toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}</div>}
+            </div>
+          </div>
+          <button onClick={onClose} style={{background:'rgba(255,255,255,.15)',color:'#fff',border:'1px solid rgba(255,255,255,.3)',borderRadius:10,padding:'8px 24px',fontSize:13,cursor:'pointer'}}>Fechar preview</button>
+        </div>
+      </div>
+    );
+  }
+
   return(
     <div>
-      <div className="page-header"><div><div className="page-title">Calendário geral</div><div className="page-sub">Todos os conteúdos programados</div></div><div style={{display:'flex',gap:8,alignItems:'center'}}><button className="btn btn-outline btn-sm" onClick={()=>{if(mes===0){setMes(11);setAno(ano-1);}else setMes(mes-1);}}>←</button><span style={{fontWeight:600,minWidth:140,textAlign:'center'}}>{meses[mes]} {ano}</span><button className="btn btn-outline btn-sm" onClick={()=>{if(mes===11){setMes(0);setAno(ano+1);}else setMes(mes+1);}}>→</button></div></div>
+      <div className="page-header">
+        <div><div className="page-title">Calendário geral</div><div className="page-sub">Clique em um conteúdo para ver o preview do Instagram</div></div>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}><button className="btn btn-outline btn-sm" onClick={()=>{if(mes===0){setMes(11);setAno(ano-1);}else setMes(mes-1);}}>←</button><span style={{fontWeight:600,minWidth:140,textAlign:'center'}}>{mesesNome[mes]} {ano}</span><button className="btn btn-outline btn-sm" onClick={()=>{if(mes===11){setMes(0);setAno(ano+1);}else setMes(mes+1);}}>→</button></div>
+      </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,marginBottom:4}}>{diasSem.map(d=><div key={d} style={{textAlign:'center',fontSize:12,fontWeight:600,color:'#7A6555',padding:'8px 0'}}>{d}</div>)}</div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:4}}>{cells.map((dia,i)=>{if(!dia)return<div key={`e${i}`}/>;const isHoje=dia===hoje.getDate()&&mes===hoje.getMonth()&&ano===hoje.getFullYear();const dayCards=cardsDoMes.filter(c=>new Date(c.data_publicacao).getDate()===dia);return(<div key={dia} style={{background:isHoje?'#EDD9C0':'#fff',borderRadius:10,padding:8,minHeight:80,border:`1px solid ${isHoje?'#8B5A2B':'#E5D5C5'}`}}><div style={{fontSize:12,fontWeight:600,color:isHoje?'#3D1F00':'#7A6555',marginBottom:4}}>{dia}</div>{dayCards.slice(0,3).map(c=><div key={c.id} style={{borderRadius:4,padding:'2px 6px',fontSize:10,color:'#fff',marginBottom:2,background:getCor(c.cliente_id),whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} title={`${getNome(c.cliente_id)} — ${c.nome}`}>{c.nome}</div>)}{dayCards.length>3&&<div style={{fontSize:9,color:'#7A6555'}}>+{dayCards.length-3}</div>}</div>);})}</div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:4}}>{cells.map((dia,i)=>{
+        if(!dia)return<div key={`e${i}`}/>;
+        const isHoje=dia===hoje.getDate()&&mes===hoje.getMonth()&&ano===hoje.getFullYear();
+        const dayCards=cardsDoMes.filter(c=>new Date(c.data_publicacao).getDate()===dia);
+        return(
+          <div key={dia} style={{background:isHoje?'#EDD9C0':'#fff',borderRadius:10,padding:8,minHeight:80,border:`1px solid ${isHoje?'#8B5A2B':'#E5D5C5'}`}}>
+            <div style={{fontSize:12,fontWeight:600,color:isHoje?'#3D1F00':'#7A6555',marginBottom:4}}>{dia}</div>
+            {dayCards.map(c=>(
+              <div key={c.id} onClick={()=>setPreviewCard(c)} style={{borderRadius:4,padding:'2px 5px',fontSize:10,color:'#fff',marginBottom:2,background:getCor(c.cliente_id),whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',cursor:'pointer'}} title="Clique para ver preview">
+                {c.nome.length>10?c.nome.slice(0,10)+'...':c.nome}
+              </div>
+            ))}
+          </div>
+        );
+      })}</div>
       <div style={{marginTop:20,display:'flex',gap:12,flexWrap:'wrap'}}>{clientes.map(c=><div key={c.id} style={{display:'flex',alignItems:'center',gap:6,fontSize:13}}><div style={{width:12,height:12,borderRadius:3,background:c.cor||'#8B5A2B'}}/>{c.nome}</div>)}</div>
+      {previewCard&&<IGPreview card={previewCard} onClose={()=>setPreviewCard(null)}/>}
     </div>
   );
 }
 
-
-// ─── EQUIPE ───
+// ── EQUIPE: email de boas-vindas + notificação da equipe ──
 function EquipePage({funcionarios,reload}){
   const [showModal,setShowModal]=useState(false);const [editFunc,setEditFunc]=useState(null);
   return(
@@ -1228,17 +931,44 @@ function EquipePage({funcionarios,reload}){
 
 function FuncModal({func,onClose,reload}){
   const [form,setForm]=useState({nome:func?.nome||'',cargo:func?.cargo||'',email:func?.email||''});
-  async function salvar(){if(!form.nome.trim()){toast('Nome obrigatório','error');return;}if(func)await sb.from('funcionarios').update(form).eq('id',func.id);else await sb.from('funcionarios').insert(form);toast('Funcionário salvo!','success');reload();onClose();}
+  const [salvando,setSalvando]=useState(false);
+  async function salvar(){
+    if(!form.nome.trim()){toast('Nome obrigatório','error');return;}
+    setSalvando(true);
+    if(func){
+      await sb.from('funcionarios').update(form).eq('id',func.id);
+      toast('Funcionário atualizado!','success');
+    }else{
+      await sb.from('funcionarios').insert(form);
+      // Notificação interna para toda a equipe
+      await sb.from('notificacoes').insert({
+        titulo:`Novo membro na equipe: ${form.nome} 👋`,
+        mensagem:`${form.nome}${form.cargo?' ('+form.cargo+')':''} foi adicionado(a) à equipe.${form.email?' Email: '+form.email:''}`,
+        tipo:'info'
+      });
+      if(form.email){
+        toast(`✉️ Notificação registrada! Configure uma Edge Function no Supabase para envio de emails reais para ${form.email}.`,'success');
+      }else{
+        toast('Funcionário adicionado! Equipe notificada.','success');
+      }
+    }
+    setSalvando(false);reload();onClose();
+  }
   return(
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal">
         <div className="modal-header"><h3 style={{fontSize:18,fontWeight:600}}>{func?'Editar':'Novo'} funcionário</h3><button onClick={onClose} style={{fontSize:20,color:'#7A6555'}}>✕</button></div>
         <div className="modal-body">
-          <div style={{marginBottom:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Conteudo *</label><input value={form.nome} onChange={e=>setForm({...form,nome:e.target.value})} placeholder="Nome do colaborador"/></div>
+          <div style={{marginBottom:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Nome *</label><input value={form.nome} onChange={e=>setForm({...form,nome:e.target.value})} placeholder="Nome do colaborador"/></div>
           <div style={{marginBottom:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Cargo</label><input value={form.cargo} onChange={e=>setForm({...form,cargo:e.target.value})} placeholder="Ex: Designer, Social Media"/></div>
-          <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>E-mail</label><input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="email@agencia.com"/></div>
+          <div style={{marginBottom:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>E-mail</label><input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="email@agencia.com"/></div>
+          {!func&&(
+            <div style={{background:form.email?'#D4EDDA':'#FEF3C7',borderRadius:8,padding:12,fontSize:13,color:form.email?'#2D7A3A':'#92600A'}}>
+              {form.email?`✉️ Ao salvar, a equipe receberá uma notificação interna sobre o novo membro. Para envio de email real para ${form.email}, configure uma Edge Function no Supabase.`:'💡 Adicione um e-mail para incluí-lo na notificação de boas-vindas.'}
+            </div>
+          )}
         </div>
-        <div className="modal-footer"><button className="btn btn-outline" onClick={onClose}>Cancelar</button><button className="btn btn-primary" onClick={salvar}>Salvar</button></div>
+        <div className="modal-footer"><button className="btn btn-outline" onClick={onClose}>Cancelar</button><button className="btn btn-primary" onClick={salvar} disabled={salvando}>{salvando?'Salvando...':'Salvar'}</button></div>
       </div>
     </div>
   );
