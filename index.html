@@ -288,7 +288,6 @@ function App(){
   const [cards,setCards]=useState([]);
   const [notifs,setNotifs]=useState([]);
   const [notifUnread,setNotifUnread]=useState(0);
-  const [showNotif,setShowNotif]=useState(false);
   useEffect(()=>{
     loadAll();
     const ch=sb.channel('rt').on('postgres_changes',{event:'*',schema:'public',table:'notificacoes'},loadNotifs).on('postgres_changes',{event:'*',schema:'public',table:'cards'},loadCards).on('postgres_changes',{event:'*',schema:'public',table:'checklist_items'},loadFuncs).subscribe();
@@ -298,12 +297,12 @@ function App(){
   async function loadFuncs(){const {data}=await sb.from('funcionarios').select('*,observacao:funcionario_observacoes(*),checklist:checklist_items(*)').eq('status','ativo');setFuncionarios(data||[]);}
   async function loadClientes(){const {data}=await sb.from('clientes').select('*').eq('status','ativo');setClientes(data||[]);}
   async function loadCards(){const {data}=await sb.from('cards').select('*,midias:card_midias(*)');setCards(data||[]);}
-  async function loadNotifs(){const {data}=await sb.from('notificacoes').select('*').order('created_at',{ascending:false}).limit(30);setNotifs(data||[]);setNotifUnread((data||[]).filter(n=>!n.lida).length);}
+  async function loadNotifs(){const {data}=await sb.from('notificacoes').select('*').order('created_at',{ascending:false}).limit(200);setNotifs(data||[]);setNotifUnread((data||[]).filter(n=>!n.lida).length);}
   function navTo(p,cid=null){setPage(p);if(cid)setClienteId(cid);}
   const currentCliente=clientes.find(c=>c.id===clienteId);
   return(
     <div style={{display:'flex'}}>
-      <Sidebar page={page} navTo={navTo} notifUnread={notifUnread} showNotif={showNotif} setShowNotif={setShowNotif} notifs={notifs} loadNotifs={loadNotifs}/>
+      <Sidebar page={page} navTo={navTo} notifUnread={notifUnread} notifs={notifs} loadNotifs={loadNotifs}/>
       <div className="main">
         {page==='dashboard'&&<Dashboard funcionarios={funcionarios} clientes={clientes} cards={cards} notifs={notifs} navTo={navTo} reload={loadAll}/>}
         {page==='clientes'&&<ClientesPage clientes={clientes} navTo={navTo} reload={loadClientes} funcionarios={funcionarios}/>}
@@ -311,12 +310,13 @@ function App(){
         {page==='calendario'&&<CalendarioPage cards={cards} clientes={clientes}/>}
         {page==='equipe'&&<EquipePage funcionarios={funcionarios} reload={loadFuncs} clientes={clientes}/>}
         {page==='processos'&&<ProcessosPage/>}
+        {page==='notificacoes'&&<NotificacoesPage notifs={notifs} reload={loadNotifs}/>}
       </div>
     </div>
   );
 }
 
-function Sidebar({page,navTo,notifUnread,showNotif,setShowNotif,notifs,loadNotifs}){
+function Sidebar({page,navTo,notifUnread,notifs,loadNotifs}){
   const nav=[{key:'dashboard',icon:'DB',label:'Dashboard'},{key:'clientes',icon:'CL',label:'Clientes'},{key:'calendario',icon:'CA',label:'Calendario'},{key:'equipe',icon:'EQ',label:'Equipe'},{key:'processos',icon:'PR',label:'Processos'}];
   async function marcarLidas(){await sb.from('notificacoes').update({lida:true}).eq('lida',false);loadNotifs();}
   return(
@@ -324,11 +324,10 @@ function Sidebar({page,navTo,notifUnread,showNotif,setShowNotif,notifs,loadNotif
       <div className="sidebar-logo">Lumet<br/><span>Marketing Agency</span></div>
       {nav.map(n=><div key={n.key} className={`nav-item${page===n.key||page==='cliente'&&n.key==='clientes'?' active':''}`} onClick={()=>navTo(n.key)}><span className="nav-icon">{n.icon}</span>{n.label}</div>)}
       <div style={{marginTop:'auto'}}>
-        <div className="nav-item" onClick={()=>{setShowNotif(!showNotif);if(!showNotif)marcarLidas();}}>
+        <div className={`nav-item${page==='notificacoes'?' active':''}`} onClick={()=>{navTo('notificacoes');marcarLidas();}}>
           <span className="nav-icon">NT</span>Notificações
           {notifUnread>0&&<span style={{background:'#C8956C',color:'#fff',borderRadius:20,padding:'1px 7px',fontSize:11,marginLeft:'auto'}}>{notifUnread}</span>}
         </div>
-        {showNotif&&<NotifPanel notifs={notifs} onClose={()=>setShowNotif(false)}/>}
       </div>
     </div>
   );
@@ -1375,6 +1374,187 @@ function LoteModal({loteLink,loteCards,cliente,onClose}){
           </>}
         </div>
       </div>
+    </div>
+  );
+}
+
+
+// ── PÁGINA COMPLETA DE NOTIFICAÇÕES ──
+function NotificacoesPage({notifs,reload}){
+  const [filtro,setFiltro]=useState('todos');
+  const [busca,setBusca]=useState('');
+  const [detalhe,setDetalhe]=useState(null);
+
+  function icone(tipo){return tipo==='success'?'✓':tipo==='warning'?'✕':'ℹ';}
+  function cor(tipo){return tipo==='success'?'#2D7A3A':tipo==='warning'?'#B91C1C':'#3D1F00';}
+  function bg(tipo){return tipo==='success'?'#D4EDDA':tipo==='warning'?'#FEE2E2':'#E8C9A8';}
+  function bgLight(tipo){return tipo==='success'?'#F0FFF4':tipo==='warning'?'#FFF5F5':'#FAF3EC';}
+
+  function parseMensagem(msg){
+    if(!msg)return[];
+    return msg.split('•').map(p=>p.trim()).filter(Boolean);
+  }
+
+  async function apagarNotif(id){
+    await sb.from('notificacoes').delete().eq('id',id);
+    reload();
+  }
+  async function apagarTodas(){
+    if(!window.confirm('Apagar todo o histórico de notificações?'))return;
+    await sb.from('notificacoes').delete().neq('id','00000000-0000-0000-0000-000000000000');
+    reload();
+  }
+  async function marcarTodasLidas(){
+    await sb.from('notificacoes').update({lida:true}).eq('lida',false);
+    reload();
+  }
+
+  const filtradas=notifs.filter(n=>{
+    const matchFiltro=filtro==='todos'||(filtro==='success'&&n.tipo==='success')||(filtro==='warning'&&n.tipo==='warning')||(filtro==='nao_lidas'&&!n.lida);
+    const matchBusca=!busca||(n.titulo||'').toLowerCase().includes(busca.toLowerCase())||(n.mensagem||'').toLowerCase().includes(busca.toLowerCase());
+    return matchFiltro&&matchBusca;
+  });
+
+  const totalSuccess=notifs.filter(n=>n.tipo==='success').length;
+  const totalWarning=notifs.filter(n=>n.tipo==='warning').length;
+  const totalNaoLidas=notifs.filter(n=>!n.lida).length;
+
+  // Agrupar por data
+  function agruparPorData(lista){
+    const grupos={};
+    lista.forEach(n=>{
+      const d=new Date(n.created_at);
+      const hoje=new Date();const ontem=new Date();ontem.setDate(ontem.getDate()-1);
+      let label=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+      if(d.toDateString()===hoje.toDateString())label='Hoje';
+      else if(d.toDateString()===ontem.toDateString())label='Ontem';
+      if(!grupos[label])grupos[label]=[];
+      grupos[label].push(n);
+    });
+    return grupos;
+  }
+  const grupos=agruparPorData(filtradas);
+
+  return(
+    <div>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Notificações</div>
+          <div className="page-sub">{notifs.length} no histórico · {totalNaoLidas} não lidas</div>
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          {totalNaoLidas>0&&<button className="btn btn-outline btn-sm" onClick={marcarTodasLidas}>Marcar todas como lidas</button>}
+          {notifs.length>0&&<button className="btn btn-outline btn-sm" style={{color:'#B91C1C',borderColor:'#FCA5A5'}} onClick={apagarTodas}>Limpar histórico</button>}
+        </div>
+      </div>
+
+      {/* Resumo por tipo */}
+      <div className="grid-4" style={{marginBottom:20}}>
+        {[
+          {v:notifs.length,l:'Total',c:'#3D1F00',f:'todos',bg:'#FAF3EC'},
+          {v:totalSuccess,l:'Aprovações / Conclusões',c:'#2D7A3A',f:'success',bg:'#D4EDDA'},
+          {v:totalWarning,l:'Reprovações / Alertas',c:'#B91C1C',f:'warning',bg:'#FEE2E2'},
+          {v:totalNaoLidas,l:'Não lidas',c:'#92600A',f:'nao_lidas',bg:'#FEF3C7'},
+        ].map((s,i)=>(
+          <div key={i} onClick={()=>setFiltro(filtro===s.f?'todos':s.f)} style={{background:filtro===s.f?s.bg:'#fff',borderRadius:12,border:`2px solid ${filtro===s.f?s.c:'#E5D5C5'}`,padding:'16px 20px',cursor:'pointer',transition:'all .2s'}}>
+            <div style={{fontSize:28,fontWeight:700,color:s.c}}>{s.v}</div>
+            <div style={{fontSize:12,color:'#7A6555',marginTop:2}}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Busca */}
+      <div style={{marginBottom:20,position:'relative'}}>
+        <input
+          placeholder="Buscar em notificações..."
+          value={busca} onChange={e=>setBusca(e.target.value)}
+          style={{paddingLeft:36,background:'#fff',border:'1.5px solid #E5D5C5',borderRadius:10}}
+        />
+        <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'#A89080',fontSize:14}}>🔍</span>
+        {busca&&<button onClick={()=>setBusca('')} style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',color:'#A89080',fontSize:16,border:'none',background:'none',cursor:'pointer'}}>✕</button>}
+      </div>
+
+      {/* Lista agrupada por data */}
+      {filtradas.length===0
+        ?<div className="card" style={{textAlign:'center',padding:'48px 0',color:'#A89080'}}>
+          <div style={{fontSize:40,marginBottom:12}}>🔔</div>
+          <div style={{fontSize:15,fontWeight:600}}>Nenhuma notificação encontrada</div>
+          {busca&&<div style={{fontSize:13,marginTop:4}}>Tente buscar por outro termo</div>}
+        </div>
+        :Object.entries(grupos).map(([data,lista])=>(
+          <div key={data} style={{marginBottom:24}}>
+            <div style={{fontSize:11,fontWeight:700,color:'#7A6555',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:10,display:'flex',alignItems:'center',gap:8}}>
+              <div style={{flex:1,height:1,background:'#E5D5C5'}}/>
+              {data}
+              <div style={{flex:1,height:1,background:'#E5D5C5'}}/>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {lista.map(n=>(
+                <div key={n.id}
+                  style={{background:n.lida?'#fff':bgLight(n.tipo),border:`1px solid ${n.lida?'#E5D5C5':cor(n.tipo)+'44'}`,borderLeft:`4px solid ${cor(n.tipo)}`,borderRadius:12,padding:'14px 16px',display:'flex',gap:12,alignItems:'flex-start',cursor:'pointer',transition:'all .2s'}}
+                  onClick={()=>setDetalhe(n)}
+                  onMouseEnter={e=>e.currentTarget.style.boxShadow='0 2px 12px rgba(61,31,0,.1)'}
+                  onMouseLeave={e=>e.currentTarget.style.boxShadow='none'}
+                >
+                  <div style={{width:32,height:32,borderRadius:'50%',background:bg(n.tipo),color:cor(n.tipo),fontWeight:700,fontSize:13,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{icone(n.tipo)}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+                      <div style={{fontSize:14,fontWeight:700,color:cor(n.tipo)}}>{n.titulo}</div>
+                      {!n.lida&&<span style={{background:cor(n.tipo),color:'#fff',borderRadius:20,padding:'1px 7px',fontSize:10,fontWeight:600,flexShrink:0}}>nova</span>}
+                    </div>
+                    {/* Partes da mensagem */}
+                    {parseMensagem(n.mensagem).map((p,i)=>(
+                      <div key={i} style={{fontSize:12,color:'#6B3A1F',marginBottom:2}}>{p}</div>
+                    ))}
+                    <div style={{fontSize:11,color:'#A89080',marginTop:4}}>{new Date(n.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+                  </div>
+                  <button
+                    onClick={e=>{e.stopPropagation();apagarNotif(n.id);}}
+                    style={{color:'#C8956C',fontSize:16,padding:'0 4px',border:'none',background:'none',cursor:'pointer',flexShrink:0,opacity:.6}}
+                    title="Apagar esta notificação"
+                  >✕</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
+      }
+
+      {/* Modal de detalhe */}
+      {detalhe&&(
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setDetalhe(null)}>
+          <div className="modal" style={{maxWidth:480}}>
+            <div className="modal-header" style={{borderLeft:`4px solid ${cor(detalhe.tipo)}`}}>
+              <div style={{display:'flex',gap:10,alignItems:'center'}}>
+                <div style={{width:34,height:34,borderRadius:'50%',background:bg(detalhe.tipo),color:cor(detalhe.tipo),fontWeight:700,fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{icone(detalhe.tipo)}</div>
+                <h3 style={{fontSize:16,fontWeight:700,color:cor(detalhe.tipo)}}>{detalhe.titulo}</h3>
+              </div>
+              <button onClick={()=>setDetalhe(null)} style={{fontSize:20,color:'#7A6555'}}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:16}}>
+                {parseMensagem(detalhe.mensagem).map((p,i)=>{
+                  const [label,valor]=p.includes(':')?p.split(':',2):['',p];
+                  return(
+                    <div key={i} style={{background:'#FAF3EC',borderRadius:8,padding:'10px 14px'}}>
+                      {label&&<div style={{fontSize:10,fontWeight:700,color:'#7A6555',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:3}}>{label.trim()}</div>}
+                      <div style={{fontSize:14,color:'#2C1500',fontWeight:500}}>{valor?valor.trim():p}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                <span style={{background:bg(detalhe.tipo),color:cor(detalhe.tipo),padding:'3px 12px',borderRadius:20,fontSize:11,fontWeight:600}}>{detalhe.tipo==='success'?'Sucesso':detalhe.tipo==='warning'?'Atenção':'Info'}</span>
+                <span style={{fontSize:12,color:'#A89080'}}>{new Date(detalhe.created_at).toLocaleString('pt-BR')}</span>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline btn-sm" style={{color:'#B91C1C',borderColor:'#FCA5A5'}} onClick={()=>{apagarNotif(detalhe.id);setDetalhe(null);}}>Apagar</button>
+              <button className="btn btn-primary" onClick={()=>setDetalhe(null)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
