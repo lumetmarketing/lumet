@@ -209,17 +209,17 @@ function AprovacaoPage({token}){
       setCards(lcs||[]);setLoading(false);
     }load();
   },[token]);
-  async function aprovar(lcId,cardId){
+  async function aprovar(lcId,cardId,nomeCard){
     await sb.from('aprovacao_lote_cards').update({status:'aprovado',respondido_em:new Date().toISOString()}).eq('id',lcId);
     await sb.from('cards').update({aprovacao_status:'aprovado',status:'aprovado'}).eq('id',cardId);
-    await sb.from('notificacoes').insert({titulo:`♥ Aprovado: ${card?.nome||'Conteúdo'}`,mensagem:`Cliente: ${lote?.nome_cliente||'—'} • Conteúdo: ${card?.nome||'—'} • Aprovado em ${new Date().toLocaleString('pt-BR')}`,tipo:'success'});
+    await sb.from('notificacoes').insert({titulo:`♥ Aprovado: ${nomeCard||'Conteúdo'}`,mensagem:`Cliente: ${lote?.nome_cliente||'—'} • Conteúdo: ${nomeCard||'—'} • Aprovado em ${new Date().toLocaleString('pt-BR')}`,tipo:'success'});
     setCards(cs=>cs.map(c=>c.id===lcId?{...c,status:'aprovado'}:c));toast('Aprovado!','success');
   }
-  async function reprovar(lcId,cardId){
+  async function reprovar(lcId,cardId,nomeCard){
     if(!obs.trim()||obs.trim().length<5){toast('Descreva o motivo (mín. 5 caracteres)','error');return;}
     await sb.from('aprovacao_lote_cards').update({status:'reprovado',observacao_cliente:obs,respondido_em:new Date().toISOString()}).eq('id',lcId);
     await sb.from('cards').update({aprovacao_status:'reprovado',status:'producao',observacao_cliente:obs}).eq('id',cardId);
-    await sb.from('notificacoes').insert({titulo:`✕ Reprovado: ${card?.nome||'Conteúdo'}`,mensagem:`Cliente: ${lote?.nome_cliente||'—'} • Conteúdo: ${card?.nome||'—'} • Motivo: ${obs}`,tipo:'warning'});
+    await sb.from('notificacoes').insert({titulo:`✕ Reprovado: ${nomeCard||'Conteúdo'}`,mensagem:`Cliente: ${lote?.nome_cliente||'—'} • Conteúdo: ${nomeCard||'—'} • Motivo: ${obs}`,tipo:'warning'});
     setCards(cs=>cs.map(c=>c.id===lcId?{...c,status:'reprovado',observacao_cliente:obs}:c));
     setReprovandoId(null);setObs('');toast('Resposta registrada!');
   }
@@ -258,11 +258,11 @@ function AprovacaoPage({token}){
                 {lc.status==='pendente'&&(reprovandoId===lc.id?(
                   <div>
                     <textarea placeholder="Descreva o motivo..." value={obs} onChange={e=>setObs(e.target.value)} style={{marginBottom:12}}/>
-                    <div style={{display:'flex',gap:10}}><button className="btn btn-danger" style={{flex:1}} onClick={()=>reprovar(lc.id,card.id)}>Confirmar reprovação</button><button className="btn btn-outline" onClick={()=>{setReprovandoId(null);setObs('')}}>Cancelar</button></div>
+                    <div style={{display:'flex',gap:10}}><button className="btn btn-danger" style={{flex:1}} onClick={()=>reprovar(lc.id,card.id,card?.nome)}>Confirmar reprovação</button><button className="btn btn-outline" onClick={()=>{setReprovandoId(null);setObs('')}}>Cancelar</button></div>
                   </div>
                 ):(
                   <div className="aprova-btns">
-                    <button className="aprova-btn aprova-btn-sim" onClick={()=>aprovar(lc.id,card.id)}><span style={{fontSize:36}}>♥</span><span>Aprovar</span></button>
+                    <button className="aprova-btn aprova-btn-sim" onClick={()=>aprovar(lc.id,card.id,card?.nome)}><span style={{fontSize:36}}>♥</span><span>Aprovar</span></button>
                     <button className="aprova-btn aprova-btn-nao" onClick={()=>setReprovandoId(lc.id)}><span style={{fontSize:36}}>✕</span><span>Reprovar</span></button>
                   </div>
                 ))}
