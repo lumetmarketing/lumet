@@ -312,7 +312,7 @@ function Sidebar({page,navTo,notifUnread,showNotif,setShowNotif,notifs,loadNotif
           <span className="nav-icon">NT</span>Notificações
           {notifUnread>0&&<span style={{background:'#C8956C',color:'#fff',borderRadius:20,padding:'1px 7px',fontSize:11,marginLeft:'auto'}}>{notifUnread}</span>}
         </div>
-        {showNotif&&<div className="notif-panel">{notifs.length===0?<p style={{fontSize:13,color:'#7A6555',textAlign:'center',padding:8}}>Sem notificações</p>:notifs.slice(0,10).map(n=><div key={n.id} style={{padding:'8px 0',borderBottom:'1px solid #E5D5C5',opacity:n.lida?.6:1}}><div style={{fontSize:13,fontWeight:600,color:n.tipo==='success'?'#2D7A3A':n.tipo==='warning'?'#92600A':'#3D1F00'}}>{n.titulo}</div><div style={{fontSize:12,color:'#7A6555'}}>{n.mensagem}</div></div>)}</div>}
+        {showNotif&&<NotifPanel notifs={notifs} onClose={()=>setShowNotif(false)}/>}
       </div>
     </div>
   );
@@ -321,6 +321,7 @@ function Sidebar({page,navTo,notifUnread,showNotif,setShowNotif,notifs,loadNotif
 function Dashboard({funcionarios,clientes,cards,notifs,navTo,reload}){
   const pendentes=cards.filter(c=>c.status==='aguardando').length;
   const aprovados=cards.filter(c=>c.status==='aprovado').length;
+  const [funcDetalhe,setFuncDetalhe]=useState(null);
   return(
     <div>
       <div className="page-header"><div><div className="page-title">Dashboard</div><div className="page-sub">Visão geral da agência</div></div></div>
@@ -334,9 +335,10 @@ function Dashboard({funcionarios,clientes,cards,notifs,navTo,reload}){
         ))}
       </div>
       <div className="section-title">Equipe — checklist do dia</div>
-      <div className="grid-2" style={{marginBottom:24}}>{funcionarios.map(f=><FuncChecklistCard key={f.id} func={f} reload={reload}/>)}</div>
+      <div className="grid-2" style={{marginBottom:24}}>{funcionarios.map(f=><FuncChecklistCard key={f.id} func={f} reload={reload} onDblClick={()=>{setFuncDetalhe(f);}}/>)}</div>
       <div className="section-title">Notificações recentes</div>
       <div className="card">{notifs.length===0?<p style={{color:'#7A6555',fontSize:14}}>Nenhuma notificação ainda.</p>:notifs.slice(0,5).map(n=><div key={n.id} style={{display:'flex',gap:12,padding:'10px 0',borderBottom:'1px solid #E5D5C5',alignItems:'flex-start'}}><div style={{width:34,height:34,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:n.tipo==='success'?'#D4EDDA':n.tipo==='warning'?'#FEF3C7':'#E8C9A8',fontSize:16,flexShrink:0}}>{n.tipo==='success'?'✓':n.tipo==='warning'?'!':'ℹ'}</div><div><div style={{fontSize:14,fontWeight:600,color:'#2C1500'}}>{n.titulo}</div><div style={{fontSize:13,color:'#7A6555'}}>{n.mensagem}</div><div style={{fontSize:11,color:'#A89080'}}>{new Date(n.created_at).toLocaleString('pt-BR')}</div></div></div>)}</div>
+      {funcDetalhe&&<FuncDetalheModal func={funcDetalhe} onClose={()=>setFuncDetalhe(null)} reload={reload}/>}
     </div>
   );
 }
@@ -477,7 +479,7 @@ function ProcessoModal({processo,onClose,reload,totalProcessos}){
 }
 
 // ── CHECKLIST: tarefas vencidas agora têm check e delete ──
-function FuncChecklistCard({func,reload}){
+function FuncChecklistCard({func,reload,onDblClick}){
   const [novaTask,setNovaTask]=useState('');const [editingId,setEditingId]=useState(null);const [editText,setEditText]=useState('');
   const [obs,setObs]=useState(func.observacao?.[0]?.observacao||'');const [addingObs,setAddingObs]=useState(false);const [verDias,setVerDias]=useState(false);
   const hoje=new Date().toISOString().split('T')[0];
@@ -490,7 +492,7 @@ function FuncChecklistCard({func,reload}){
   async function saveEdit(id){if(!editText.trim())return;await sb.from('checklist_items').update({titulo:editText}).eq('id',id);setEditingId(null);setEditText('');reload();}
   async function salvarObs(){const ex=func.observacao?.[0];if(ex)await sb.from('funcionario_observacoes').update({observacao:obs,updated_at:new Date().toISOString()}).eq('id',ex.id);else await sb.from('funcionario_observacoes').insert({funcionario_id:func.id,observacao:obs});setAddingObs(false);reload();toast('Observação salva!','success');}
   return(
-    <div className="func-card">
+    <div className="func-card" onDoubleClick={onDblClick} style={{cursor:onDblClick?'pointer':'default'}} title={onDblClick?'Duplo clique para ver detalhes':''}>
       <div style={{display:'flex',gap:12,alignItems:'center',marginBottom:14}}>
         <div className="func-avatar">{func.nome.charAt(0)}</div>
         <div style={{flex:1}}><div style={{fontWeight:600,color:'#2C1500'}}>{func.nome}</div><div style={{fontSize:13,color:'#7A6555'}}>{func.cargo||'Colaborador'}</div><div style={{fontSize:11,color:'#A89080'}}>{new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'})}</div></div>
@@ -558,7 +560,7 @@ function ClientesPage({clientes,navTo,reload,funcionarios}){
             <div style={{flex:1}}><div style={{fontWeight:600,color:'#2C1500'}}>{c.nome}</div><div style={{fontSize:12,color:'#7A6555'}}>{c.segmento}</div></div>
           </div>
           {c.tom_de_voz&&<span className="tag">{c.tom_de_voz}</span>}
-          <button onClick={e=>apagarCliente(e,c.id,c.nome)} style={{position:'absolute',top:10,right:10,background:'#FEE2E2',color:'#B91C1C',border:'1px solid #FCA5A5',borderRadius:8,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>🗑 Apagar</button>
+          <button onClick={e=>apagarCliente(e,c.id,c.nome)} style={{position:'absolute',top:10,right:10,background:'#FEE2E2',color:'#B91C1C',border:'1px solid #FCA5A5',borderRadius:8,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>Apagar</button>
         </div>
       ))}</div>
       {showModal&&<ClienteModal onClose={()=>setShowModal(false)} reload={reload} funcionarios={funcionarios}/>}
@@ -694,12 +696,14 @@ function ClienteDetalhe({cliente,cards,funcionarios,reload,navTo}){
     if(!window.confirm('Apagar este card?'))return;
     try{await sb.from('card_midias').delete().eq('card_id',cardId);await sb.from('aprovacao_lote_cards').delete().eq('card_id',cardId);const {error}=await sb.from('cards').delete().eq('id',cardId);if(error){toast('Erro ao apagar: '+error.message,'error');return;}toast('Card apagado!','success');await reload();}catch(e){toast('Erro ao apagar card.','error');}
   }
+  const [loteCardsSel,setLoteCardsSel]=useState([]);
   async function gerarLote(){
     if(selectedForLote.length===0){toast('Selecione ao menos 1 conteúdo','error');return;}
+    const cardsParaLote=cards.filter(c=>selectedForLote.includes(c.id));
     const {data:lote}=await sb.from('aprovacao_lotes').insert({cliente_id:cliente.id}).select().single();
     await sb.from('aprovacao_lote_cards').insert(selectedForLote.map(cid=>({lote_id:lote.id,card_id:cid})));
     const link=`${window.location.origin}${window.location.pathname}?aprovar=${lote.token}`;
-    setLoteLink(link);setShowLoteModal(true);setSelectedForLote([]);toast('Link gerado!','success');
+    setLoteLink(link);setLoteCardsSel(cardsParaLote);setShowLoteModal(true);setSelectedForLote([]);toast('Link gerado!','success');
   }
   async function addData(){if(!novaData.titulo||!novaData.data){toast('Preencha título e data','error');return;}const {data:d}=await sb.from('datas_comemorativas').insert({cliente_id:cliente.id,titulo:novaData.titulo,data:novaData.data,tipo:'personalizada'}).select().single();setDatas([...datas,d]);setNovaData({titulo:'',data:''});setAddingData(false);toast('Data adicionada!','success');}
   async function removerData(id){await sb.from('datas_comemorativas').delete().eq('id',id);setDatas(datas.filter(d=>d.id!==id));}
@@ -717,7 +721,7 @@ function ClienteDetalhe({cliente,cards,funcionarios,reload,navTo}){
         <button className="btn btn-outline btn-sm" onClick={()=>setShowEditCliente(true)}>✏ Editar</button>
         <button className="btn btn-primary btn-sm" onClick={()=>{setEditCard(null);setShowCardModal(true);}}>+ Conteúdo</button>
       </div>
-      <div className="tabs">{[{k:'kanban',l:'Kanban'},{k:'sobre',l:'Sobre a empresa'},{k:'datas',l:'Datas'},{k:'links',l:'Links'}].map(t=><div key={t.k} className={`tab${tab===t.k?' active':''}`} onClick={()=>setTab(t.k)}>{t.l}</div>)}</div>
+      <div className="tabs">{[{k:'kanban',l:'Kanban'},{k:'sobre',l:'Sobre a empresa'},{k:'datas',l:'Datas'},{k:'links',l:'Referências'}].map(t=><div key={t.k} className={`tab${tab===t.k?' active':''}`} onClick={()=>setTab(t.k)}>{t.l}</div>)}</div>
 
       {tab==='sobre'&&(
         <div style={{display:'flex',flexDirection:'column',gap:16}}>
@@ -747,7 +751,7 @@ function ClienteDetalhe({cliente,cards,funcionarios,reload,navTo}){
           <div className="card"><div className="section-title">Prompt do cliente</div><div style={{background:'#FAF3EC',borderRadius:10,padding:4,marginBottom:8}}><p style={{fontSize:12,color:'#7A6555',padding:'4px 8px'}}>💡 Cole aqui o prompt ideal para usar no Claude ao criar conteúdo para este cliente</p></div><EditableField value={cliente.prompt_cliente} onSave={v=>saveField('prompt_cliente',v)} placeholder="Clique para adicionar o prompt ideal para este cliente..."/></div>
         </div>
       )}
-      {tab==='links'&&<div className="card"><div className="section-title">Links de referência</div><LinkManager clienteId={cliente.id} links={links} setLinks={setLinks}/></div>}
+      {tab==='links'&&<div className="card"><div className="section-title">Referências</div><LinkManager clienteId={cliente.id} links={links} setLinks={setLinks}/></div>}
       {tab==='datas'&&(
         <div className="card">
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}><div className="section-title" style={{marginBottom:0}}>Datas comemorativas</div><button className="btn btn-primary btn-sm" onClick={()=>setAddingData(true)}>+ Adicionar data</button></div>
@@ -787,7 +791,7 @@ function ClienteDetalhe({cliente,cards,funcionarios,reload,navTo}){
       )}
       {showCardModal&&<CardModal card={editCard} clienteId={cliente.id} funcionarios={funcionarios} onClose={()=>{setShowCardModal(false);setEditCard(null);}} reload={reload}/>}
       {showEditCliente&&<ClienteModal cliente={cliente} onClose={()=>setShowEditCliente(false)} reload={reload} funcionarios={funcionarios}/>}
-      {showLoteModal&&<div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowLoteModal(false)}><div className="modal"><div className="modal-header"><h3 style={{fontSize:18,fontWeight:600}}>Link gerado! 🎉</h3><button onClick={()=>setShowLoteModal(false)} style={{fontSize:20,color:'#7A6555'}}>✕</button></div><div className="modal-body"><p style={{fontSize:14,color:'#7A6555',marginBottom:12}}>Copie e envie para o cliente:</p><div style={{background:'#FAF3EC',border:'1px solid #E5D5C5',borderRadius:10,padding:16,wordBreak:'break-all',fontSize:13,color:'#3D1F00',marginBottom:16}}>{loteLink}</div><button className="btn btn-primary" style={{width:'100%',justifyContent:'center'}} onClick={()=>{navigator.clipboard.writeText(loteLink);toast('Link copiado!','success');}}>Copiar link</button></div></div></div>}
+      {showLoteModal&&<LoteModal loteLink={loteLink} loteCards={loteCardsSel} cliente={cliente} onClose={()=>setShowLoteModal(false)}/>}
     </div>
   );
 }
@@ -806,7 +810,7 @@ function LinkManager({clienteId,links,setLinks}){
 
 function CardModal({card,clienteId,funcionarios,onClose,reload}){
   const isEdit=card?.id;
-  const [form,setForm]=useState({nome:card?.nome||'',tipo_conteudo:card?.tipo_conteudo||'post',legenda:card?.legenda||'',data_publicacao:card?.data_publicacao?.split('T')[0]||'',responsavel_id:card?.responsavel_id||'',observacoes_internas:card?.observacoes_internas||'',status:card?.status||'ideia',cliente_id:clienteId});
+  const [form,setForm]=useState({nome:card?.nome||'',tipo_conteudo:card?.tipo_conteudo||'post',legenda:card?.legenda||'',texto_arte:card?.texto_arte||'',data_publicacao:card?.data_publicacao?.split('T')[0]||'',responsavel_id:card?.responsavel_id||'',observacoes_internas:card?.observacoes_internas||'',status:card?.status||'ideia',cliente_id:clienteId});
   const [midias,setMidias]=useState([]);const [uploading,setUploading]=useState(false);
   useEffect(()=>{if(isEdit)sb.from('card_midias').select('*').eq('card_id',card.id).then(({data})=>setMidias(data||[]));},[ card?.id]);
   async function uploadMidia(file){setUploading(true);const ext=file.name.split('.').pop();const path=`cards/${Date.now()}.${ext}`;const {error}=await sb.storage.from('midias').upload(path,file);if(error){toast('Erro no upload','error');setUploading(false);return;}const {data:{publicUrl}}=sb.storage.from('midias').getPublicUrl(path);const tipo=file.type.startsWith('video')?'video':'imagem';if(isEdit){const {data:m}=await sb.from('card_midias').insert({card_id:card.id,url:publicUrl,tipo,nome:file.name}).select().single();setMidias([...midias,m]);}else setMidias([...midias,{url:publicUrl,tipo,nome:file.name,_temp:true}]);setUploading(false);}
@@ -818,9 +822,10 @@ function CardModal({card,clienteId,funcionarios,onClose,reload}){
         <div className="modal-header"><h3 style={{fontSize:18,fontWeight:600}}>{isEdit?'Editar conteúdo':'Novo conteúdo'}</h3><button onClick={onClose} style={{fontSize:20,color:'#7A6555'}}>✕</button></div>
         <div className="modal-body">
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
-            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Nome *</label><input value={form.nome} onChange={e=>setForm({...form,nome:e.target.value})} placeholder="Ex: Post dia das mães"/></div>
+            <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Título do conteúdo *</label><input value={form.nome} onChange={e=>setForm({...form,nome:e.target.value})} placeholder="Ex: Post dia das mães"/></div>
             <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Tipo</label><select value={form.tipo_conteudo} onChange={e=>setForm({...form,tipo_conteudo:e.target.value})}>{['post','stories','reels','carrossel','video'].map(t=><option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}</select></div>
           </div>
+          <div style={{marginTop:12}}><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Texto na arte</label><input value={form.texto_arte||''} onChange={e=>setForm({...form,texto_arte:e.target.value})} placeholder="Texto que aparecerá na arte/imagem do conteúdo"/></div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginTop:12}}>
             <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Data de publicação</label><input type="date" value={form.data_publicacao} onChange={e=>setForm({...form,data_publicacao:e.target.value})}/></div>
             <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:6}}>Coluna kanban</label><select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>{STATUS_COLS.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></div>
@@ -923,7 +928,7 @@ function EquipePage({funcionarios,reload}){
   return(
     <div>
       <div className="page-header"><div><div className="page-title">Equipe</div><div className="page-sub">{funcionarios.length} colaboradores</div></div><button className="btn btn-primary" onClick={()=>{setEditFunc(null);setShowModal(true);}}>+ Novo funcionário</button></div>
-      <div className="grid-2">{funcionarios.map(f=><div key={f.id} className="func-card"><div style={{display:'flex',gap:12,alignItems:'center',marginBottom:12}}><div className="func-avatar">{f.nome.charAt(0)}</div><div style={{flex:1}}><div style={{fontWeight:600,color:'#2C1500'}}>{f.nome}</div><div style={{fontSize:13,color:'#7A6555'}}>{f.cargo}</div><div style={{fontSize:12,color:'#A89080'}}>{f.email}</div></div><button className="btn btn-outline btn-sm" onClick={()=>{setEditFunc(f);setShowModal(true);}}>Editar</button></div>{f.observacao?.[0]?.observacao&&<div style={{background:'#FEF3C7',borderRadius:8,padding:10,fontSize:13,color:'#92600A'}}>📝 {f.observacao[0].observacao}</div>}</div>)}</div>
+      <div className="grid-2">{funcionarios.map(f=><div key={f.id} className="func-card" onDoubleClick={()=>{setEditFunc(f);setShowModal(true);}} style={{cursor:'pointer'}} title="Duplo clique para abrir"><div style={{display:'flex',gap:12,alignItems:'center',marginBottom:12}}><div className="func-avatar">{f.nome.charAt(0)}</div><div style={{flex:1}}><div style={{fontWeight:600,color:'#2C1500'}}>{f.nome}</div><div style={{fontSize:13,color:'#7A6555'}}>{f.cargo}</div><div style={{fontSize:12,color:'#A89080'}}>{f.email}</div></div><button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();setEditFunc(f);setShowModal(true);}}>Editar</button></div>{f.observacao?.[0]?.observacao&&<div style={{background:'#FEF3C7',borderRadius:8,padding:10,fontSize:13,color:'#92600A'}}>📝 {f.observacao[0].observacao}</div>}<div style={{fontSize:11,color:'#C8956C',marginTop:8,textAlign:'center'}}>↕ duplo clique para abrir</div></div>)}</div>
       {showModal&&<FuncModal func={editFunc} onClose={()=>{setShowModal(false);setEditFunc(null);}} reload={reload}/>}
     </div>
   );
@@ -969,6 +974,137 @@ function FuncModal({func,onClose,reload}){
           )}
         </div>
         <div className="modal-footer"><button className="btn btn-outline" onClick={onClose}>Cancelar</button><button className="btn btn-primary" onClick={salvar} disabled={salvando}>{salvando?'Salvando...':'Salvar'}</button></div>
+      </div>
+    </div>
+  );
+}
+
+
+// ── NOTIF PANEL: notificações clicáveis que abrem modal ──
+function NotifPanel({notifs,onClose}){
+  const [detalhe,setDetalhe]=useState(null);
+  return(
+    <div className="notif-panel">
+      {notifs.length===0?<p style={{fontSize:13,color:'#7A6555',textAlign:'center',padding:8}}>Sem notificações</p>:
+        notifs.slice(0,15).map(n=>(
+          <div key={n.id} onClick={()=>setDetalhe(n)} style={{padding:'10px 8px',borderBottom:'1px solid #E5D5C5',opacity:n.lida?.65:1,cursor:'pointer',borderRadius:8,transition:'background .15s'}}
+            onMouseEnter={e=>e.currentTarget.style.background='#FAF3EC'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+            <div style={{fontSize:13,fontWeight:600,color:n.tipo==='success'?'#2D7A3A':n.tipo==='warning'?'#92600A':'#3D1F00'}}>{n.titulo}</div>
+            <div style={{fontSize:11,color:'#7A6555',marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{n.mensagem}</div>
+            <div style={{fontSize:10,color:'#A89080',marginTop:2}}>{new Date(n.created_at).toLocaleString('pt-BR')}</div>
+          </div>
+        ))
+      }
+      {detalhe&&(
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setDetalhe(null)} style={{zIndex:2000}}>
+          <div className="modal" style={{maxWidth:440}}>
+            <div className="modal-header">
+              <h3 style={{fontSize:17,fontWeight:600,color:detalhe.tipo==='success'?'#2D7A3A':detalhe.tipo==='warning'?'#92600A':'#3D1F00'}}>{detalhe.titulo}</h3>
+              <button onClick={()=>setDetalhe(null)} style={{fontSize:20,color:'#7A6555'}}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p style={{fontSize:14,color:'#2C1500',lineHeight:1.7,marginBottom:12}}>{detalhe.mensagem}</p>
+              <div style={{fontSize:12,color:'#A89080'}}>{new Date(detalhe.created_at).toLocaleString('pt-BR')}</div>
+              <div style={{marginTop:8}}><span style={{background:detalhe.tipo==='success'?'#D4EDDA':detalhe.tipo==='warning'?'#FEF3C7':'#E8C9A8',color:detalhe.tipo==='success'?'#2D7A3A':detalhe.tipo==='warning'?'#92600A':'#3D1F00',padding:'3px 10px',borderRadius:20,fontSize:11,fontWeight:600}}>{detalhe.tipo||'info'}</span></div>
+            </div>
+            <div className="modal-footer"><button className="btn btn-primary" onClick={()=>setDetalhe(null)}>Fechar</button></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── FUNC DETALHE MODAL: abre no dashboard ao clicar 2x ──
+function FuncDetalheModal({func,onClose,reload}){
+  const hoje=new Date().toISOString().split('T')[0];
+  const checklistHoje=(func.checklist||[]).filter(c=>c.data_tarefa===hoje);
+  const checklistPassado=(func.checklist||[]).filter(c=>c.data_tarefa<hoje&&!c.concluido);
+  const concluidas=checklistHoje.filter(c=>c.concluido).length;
+  async function toggleTask(item){const now=item.concluido?null:new Date().toISOString();await sb.from('checklist_items').update({concluido:!item.concluido,concluido_em:now}).eq('id',item.id);reload();}
+  async function deleteTask(id){await sb.from('checklist_items').delete().eq('id',id);reload();}
+  return(
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal" style={{maxWidth:520}}>
+        <div className="modal-header">
+          <div style={{display:'flex',gap:12,alignItems:'center'}}>
+            <div className="func-avatar">{func.nome.charAt(0)}</div>
+            <div><div style={{fontSize:18,fontWeight:700,color:'#2C1500'}}>{func.nome}</div><div style={{fontSize:13,color:'#7A6555'}}>{func.cargo||'Colaborador'}</div></div>
+          </div>
+          <button onClick={onClose} style={{fontSize:20,color:'#7A6555'}}>✕</button>
+        </div>
+        <div className="modal-body">
+          {func.email&&<div style={{background:'#FAF3EC',borderRadius:8,padding:10,marginBottom:12,fontSize:13,color:'#3D1F00'}}>✉️ {func.email}</div>}
+          {func.observacao?.[0]?.observacao&&<div style={{background:'#FEF3C7',borderRadius:8,padding:10,marginBottom:12,fontSize:13,color:'#92600A'}}>📝 {func.observacao[0].observacao}</div>}
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+            <div className="section-title" style={{marginBottom:0}}>Checklist de hoje</div>
+            <div style={{background:'#EDD9C0',borderRadius:8,padding:'4px 10px',fontSize:14,fontWeight:700,color:'#3D1F00'}}>{concluidas}/{checklistHoje.length} ✓</div>
+          </div>
+          {checklistPassado.length>0&&<div style={{background:'#FEE2E2',borderRadius:8,padding:'8px 10px',marginBottom:10}}>
+            <div style={{fontSize:12,fontWeight:600,color:'#B91C1C',marginBottom:6}}>⚠️ {checklistPassado.length} tarefa(s) em atraso</div>
+            {checklistPassado.map(item=><div key={item.id} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0',borderTop:'1px solid #FCA5A5'}}>
+              <span style={{fontSize:12,color:'#B91C1C',flex:1}}>{item.titulo} <span style={{color:'#A89080',fontSize:10}}>({new Date(item.data_tarefa+'T12:00').toLocaleDateString('pt-BR')})</span></span>
+              <button onClick={()=>toggleTask(item)} style={{background:'#D4EDDA',color:'#2D7A3A',border:'none',borderRadius:6,padding:'2px 8px',fontSize:11,cursor:'pointer'}}>✓</button>
+              <button onClick={()=>deleteTask(item.id)} style={{background:'#FEE2E2',color:'#B91C1C',border:'none',borderRadius:6,padding:'2px 8px',fontSize:11,cursor:'pointer'}}>✕</button>
+            </div>)}
+          </div>}
+          {checklistHoje.length===0&&checklistPassado.length===0&&<p style={{color:'#A89080',fontSize:14,textAlign:'center',padding:'16px 0'}}>Nenhuma tarefa para hoje.</p>}
+          {checklistHoje.map(item=>(
+            <div key={item.id} className="checklist-item">
+              <div className={`checklist-check${item.concluido?' done':''}`} onClick={()=>toggleTask(item)}>{item.concluido&&'✓'}</div>
+              <span style={{fontSize:13,color:item.concluido?'#A89080':'#2C1500',textDecoration:item.concluido?'line-through':'none',flex:1}}>{item.titulo}</span>
+              {item.concluido_em&&<span style={{fontSize:10,color:'#A89080'}}>{new Date(item.concluido_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>}
+              <button onClick={()=>deleteTask(item.id)} style={{color:'#B91C1C',fontSize:12,padding:'0 4px',border:'none',background:'none',cursor:'pointer'}}>✕</button>
+            </div>
+          ))}
+        </div>
+        <div className="modal-footer"><button className="btn btn-outline" onClick={onClose}>Fechar</button></div>
+      </div>
+    </div>
+  );
+}
+
+// ── LOTE MODAL: com preview IG dos conteúdos ──
+function LoteModal({loteLink,loteCards,cliente,onClose}){
+  const [previewIdx,setPreviewIdx]=useState(null);
+  function IGPreview({card}){
+    const cor=cliente?.cor||'#8B5A2B';const nome=cliente?.nome||'Conta';
+    const midia=card.midias?.[0];
+    return(
+      <div style={{width:'100%',background:'#fff',borderRadius:12,border:'1px solid #E5D5C5',overflow:'hidden',marginBottom:16}}>
+        <div style={{background:'#FAF3EC',padding:'8px 12px',fontSize:11,fontWeight:600,color:'#7A6555'}}>📱 Preview Instagram — {card.nome}</div>
+        <div style={{padding:'10px 12px',display:'flex',alignItems:'center',gap:8,borderBottom:'1px solid #efefef'}}>
+          <div style={{width:28,height:28,borderRadius:'50%',background:cor,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:12,flexShrink:0}}>{nome.charAt(0)}</div>
+          <div style={{flex:1,fontSize:12,fontWeight:600}}>{nome}</div><span style={{fontSize:14,color:'#888'}}>•••</span>
+        </div>
+        {midia&&midia.tipo!=='video'?<img src={midia.url} alt="post" style={{width:'100%',maxHeight:240,objectFit:'cover',display:'block'}}/>:
+          midia&&midia.tipo==='video'?<video src={midia.url} style={{width:'100%',maxHeight:240,objectFit:'cover',display:'block'}} muted autoPlay loop/>:
+          <div style={{width:'100%',height:160,background:`linear-gradient(135deg,${cor}22,${cor}55)`,display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:6}}><span style={{fontSize:32}}>🖼</span><span style={{fontSize:11,color:cor}}>Sem imagem</span></div>
+        }
+        <div style={{padding:'8px 12px',fontSize:11,color:'#888',display:'flex',gap:12}}>🤍 💬 ✈️</div>
+        {card.legenda&&<div style={{padding:'0 12px 10px',fontSize:12,color:'#000',lineHeight:1.5}}><strong>{nome} </strong>{card.legenda}</div>}
+        {card.data_publicacao&&<div style={{padding:'0 12px 10px',fontSize:10,color:'#888'}}>{new Date(card.data_publicacao).toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}</div>}
+      </div>
+    );
+  }
+  return(
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal" style={{maxWidth:540}}>
+        <div className="modal-header"><h3 style={{fontSize:18,fontWeight:600}}>Link gerado! 🎉</h3><button onClick={onClose} style={{fontSize:20,color:'#7A6555'}}>✕</button></div>
+        <div className="modal-body">
+          <p style={{fontSize:14,color:'#7A6555',marginBottom:12}}>Copie e envie para o cliente:</p>
+          <div style={{background:'#FAF3EC',border:'1px solid #E5D5C5',borderRadius:10,padding:14,wordBreak:'break-all',fontSize:13,color:'#3D1F00',marginBottom:12}}>{loteLink}</div>
+          <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',marginBottom:20}} onClick={()=>{navigator.clipboard.writeText(loteLink);toast('Link copiado!','success');}}>Copiar link</button>
+          {loteCards.length>0&&<>
+            <div style={{borderTop:'1px solid #E5D5C5',paddingTop:16,marginBottom:12}}>
+              <div style={{fontSize:13,fontWeight:600,color:'#3D1F00',marginBottom:8}}>📱 Preview dos conteúdos ({loteCards.length})</div>
+              <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
+                {loteCards.map((c,i)=><button key={c.id} onClick={()=>setPreviewIdx(previewIdx===i?null:i)} style={{padding:'4px 12px',borderRadius:20,fontSize:12,border:'1.5px solid',borderColor:previewIdx===i?'#3D1F00':'#E5D5C5',background:previewIdx===i?'#3D1F00':'#fff',color:previewIdx===i?'#fff':'#7A6555',cursor:'pointer'}}>{c.nome.length>14?c.nome.slice(0,14)+'...':c.nome}</button>)}
+              </div>
+              {previewIdx!==null&&loteCards[previewIdx]&&<IGPreview card={loteCards[previewIdx]}/>}
+            </div>
+          </>}
+        </div>
       </div>
     </div>
   );
