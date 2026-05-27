@@ -212,14 +212,14 @@ function AprovacaoPage({token}){
   async function aprovar(lcId,cardId){
     await sb.from('aprovacao_lote_cards').update({status:'aprovado',respondido_em:new Date().toISOString()}).eq('id',lcId);
     await sb.from('cards').update({aprovacao_status:'aprovado',status:'aprovado'}).eq('id',cardId);
-    await sb.from('notificacoes').insert({titulo:'Conteúdo aprovado! ♥',mensagem:'Um conteúdo foi aprovado pelo cliente.',tipo:'success'});
+    await sb.from('notificacoes').insert({titulo:`♥ Aprovado: ${card?.nome||'Conteúdo'}`,mensagem:`Cliente: ${lote?.nome_cliente||'—'} • Conteúdo: ${card?.nome||'—'} • Aprovado em ${new Date().toLocaleString('pt-BR')}`,tipo:'success'});
     setCards(cs=>cs.map(c=>c.id===lcId?{...c,status:'aprovado'}:c));toast('Aprovado!','success');
   }
   async function reprovar(lcId,cardId){
     if(!obs.trim()||obs.trim().length<5){toast('Descreva o motivo (mín. 5 caracteres)','error');return;}
     await sb.from('aprovacao_lote_cards').update({status:'reprovado',observacao_cliente:obs,respondido_em:new Date().toISOString()}).eq('id',lcId);
     await sb.from('cards').update({aprovacao_status:'reprovado',status:'producao',observacao_cliente:obs}).eq('id',cardId);
-    await sb.from('notificacoes').insert({titulo:'Conteúdo reprovado ✕',mensagem:`Motivo: ${obs}`,tipo:'warning'});
+    await sb.from('notificacoes').insert({titulo:`✕ Reprovado: ${card?.nome||'Conteúdo'}`,mensagem:`Cliente: ${lote?.nome_cliente||'—'} • Conteúdo: ${card?.nome||'—'} • Motivo: ${obs}`,tipo:'warning'});
     setCards(cs=>cs.map(c=>c.id===lcId?{...c,status:'reprovado',observacao_cliente:obs}:c));
     setReprovandoId(null);setObs('');toast('Resposta registrada!');
   }
@@ -508,7 +508,14 @@ function FuncChecklistCard({func,reload,onDblClick}){
   const checklistFeitas=(func.checklist||[]).filter(c=>c.concluido);
   const concluidas=checklistHoje.filter(c=>c.concluido).length;
   async function addTask(){if(!novaTask.trim())return;await sb.from('checklist_items').insert({funcionario_id:func.id,titulo:novaTask,data_tarefa:hoje});setNovaTask('');reload();}
-  async function toggleTask(item){const now=item.concluido?null:new Date().toISOString();await sb.from('checklist_items').update({concluido:!item.concluido,concluido_em:now}).eq('id',item.id);reload();}
+  async function toggleTask(item){
+    const now=item.concluido?null:new Date().toISOString();
+    await sb.from('checklist_items').update({concluido:!item.concluido,concluido_em:now}).eq('id',item.id);
+    if(!item.concluido){
+      await sb.from('notificacoes').insert({titulo:`✓ Tarefa concluída — ${func.nome}`,mensagem:`${func.nome} (${func.cargo||'Colaborador'}) concluiu: "${item.titulo}" às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`,tipo:'success'});
+    }
+    reload();
+  }
   async function deleteTask(id){await sb.from('checklist_items').delete().eq('id',id);reload();}
   async function saveEdit(id){if(!editText.trim())return;await sb.from('checklist_items').update({titulo:editText}).eq('id',id);setEditingId(null);setEditText('');reload();}
   async function salvarObs(){const ex=func.observacao?.[0];if(ex)await sb.from('funcionario_observacoes').update({observacao:obs,updated_at:new Date().toISOString()}).eq('id',ex.id);else await sb.from('funcionario_observacoes').insert({funcionario_id:func.id,observacao:obs});setAddingObs(false);reload();toast('Observação salva!','success');}
@@ -735,7 +742,7 @@ function ClienteDetalhe({cliente,cards,funcionarios,reload,navTo}){
     setUploadingEst(false);setUploadingMet(false);setMesSel('');setMesSelMet('');toast('Arquivo enviado!','success');
   }
   async function deleteDoc(id,tipo){await sb.from('cliente_docs').delete().eq('id',id);if(tipo==='estrategia')setEstrategias(e=>e.filter(d=>d.id!==id));else setMetricas(m=>m.filter(d=>d.id!==id));toast('Removido!','success');}
-  async function moverCard(cardId,novoStatus){await sb.from('cards').update({status:novoStatus}).eq('id',cardId);if(novoStatus==='publicado')await sb.from('notificacoes').insert({titulo:'Conteúdo publicado!',mensagem:'Um conteúdo foi marcado como publicado.',tipo:'success'});reload();}
+  async function moverCard(cardId,novoStatus){await sb.from('cards').update({status:novoStatus}).eq('id',cardId);if(novoStatus==='publicado'){const cardObj=cards.find(c=>c.id===cardId);await sb.from('notificacoes').insert({titulo:`📢 Publicado: ${cardObj?.nome||'Conteúdo'}`,mensagem:`Cliente: ${cliente?.nome||'—'} • Conteúdo "${cardObj?.nome||'—'}" marcado como publicado`,tipo:'success'});}reload();}
   async function deletarCard(cardId){
     if(!window.confirm('Apagar este card?'))return;
     try{await sb.from('card_midias').delete().eq('card_id',cardId);await sb.from('aprovacao_lote_cards').delete().eq('card_id',cardId);const {error}=await sb.from('cards').delete().eq('id',cardId);if(error){toast('Erro ao apagar: '+error.message,'error');return;}toast('Card apagado!','success');await reload();}catch(e){toast('Erro ao apagar card.','error');}
@@ -1149,29 +1156,72 @@ function FuncModal({func,onClose,reload}){
 // ── NOTIF PANEL: notificações clicáveis que abrem modal ──
 function NotifPanel({notifs,onClose}){
   const [detalhe,setDetalhe]=useState(null);
+  function icone(tipo){return tipo==='success'?'✓':tipo==='warning'?'!':'ℹ';}
+  function cor(tipo){return tipo==='success'?'#2D7A3A':tipo==='warning'?'#B91C1C':'#3D1F00';}
+  function bg(tipo){return tipo==='success'?'#D4EDDA':tipo==='warning'?'#FEE2E2':'#E8C9A8';}
+  // Extrair partes da mensagem (Cliente: X • Conteúdo: Y • ...)
+  function parseMensagem(msg){
+    if(!msg)return{texto:msg,partes:[]};
+    const partes=msg.split('•').map(p=>p.trim()).filter(Boolean);
+    return{partes};
+  }
   return(
     <div className="notif-panel">
-      {notifs.length===0?<p style={{fontSize:13,color:'#7A6555',textAlign:'center',padding:8}}>Sem notificações</p>:
-        notifs.slice(0,15).map(n=>(
-          <div key={n.id} onClick={()=>setDetalhe(n)} style={{padding:'10px 8px',borderBottom:'1px solid #E5D5C5',opacity:n.lida?.65:1,cursor:'pointer',borderRadius:8,transition:'background .15s'}}
-            onMouseEnter={e=>e.currentTarget.style.background='#FAF3EC'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-            <div style={{fontSize:13,fontWeight:600,color:n.tipo==='success'?'#2D7A3A':n.tipo==='warning'?'#92600A':'#3D1F00'}}>{n.titulo}</div>
-            <div style={{fontSize:11,color:'#7A6555',marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{n.mensagem}</div>
-            <div style={{fontSize:10,color:'#A89080',marginTop:2}}>{new Date(n.created_at).toLocaleString('pt-BR')}</div>
-          </div>
-        ))
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8,paddingBottom:8,borderBottom:'1px solid #E5D5C5'}}>
+        <span style={{fontSize:12,fontWeight:700,color:'#3D1F00',textTransform:'uppercase',letterSpacing:'.05em'}}>Notificações</span>
+        <span style={{fontSize:11,color:'#A89080'}}>{notifs.length} total</span>
+      </div>
+      {notifs.length===0
+        ?<p style={{fontSize:13,color:'#7A6555',textAlign:'center',padding:16}}>Sem notificações</p>
+        :notifs.slice(0,20).map(n=>{
+          const {partes}=parseMensagem(n.mensagem);
+          return(
+            <div key={n.id} onClick={()=>setDetalhe(n)}
+              style={{padding:'10px 8px',borderBottom:'1px solid #F0E8E0',opacity:n.lida?.7:1,cursor:'pointer',borderRadius:8,transition:'background .15s',display:'flex',gap:8,alignItems:'flex-start'}}
+              onMouseEnter={e=>e.currentTarget.style.background='#FAF3EC'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+              <div style={{width:26,height:26,borderRadius:'50%',background:bg(n.tipo),color:cor(n.tipo),fontWeight:700,fontSize:12,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>{icone(n.tipo)}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:700,color:cor(n.tipo),marginBottom:2}}>{n.titulo}</div>
+                {partes.length>0
+                  ?partes.map((p,i)=><div key={i} style={{fontSize:11,color:'#6B3A1F',marginBottom:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p}</div>)
+                  :<div style={{fontSize:11,color:'#7A6555',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{n.mensagem}</div>
+                }
+                <div style={{fontSize:10,color:'#A89080',marginTop:3}}>{new Date(n.created_at).toLocaleString('pt-BR')}</div>
+              </div>
+            </div>
+          );
+        })
       }
       {detalhe&&(
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setDetalhe(null)} style={{zIndex:2000}}>
-          <div className="modal" style={{maxWidth:440}}>
-            <div className="modal-header">
-              <h3 style={{fontSize:17,fontWeight:600,color:detalhe.tipo==='success'?'#2D7A3A':detalhe.tipo==='warning'?'#92600A':'#3D1F00'}}>{detalhe.titulo}</h3>
+          <div className="modal" style={{maxWidth:460}}>
+            <div className="modal-header" style={{borderLeft:`4px solid ${cor(detalhe.tipo)}`}}>
+              <div style={{display:'flex',gap:10,alignItems:'center'}}>
+                <div style={{width:32,height:32,borderRadius:'50%',background:bg(detalhe.tipo),color:cor(detalhe.tipo),fontWeight:700,fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{icone(detalhe.tipo)}</div>
+                <h3 style={{fontSize:16,fontWeight:700,color:cor(detalhe.tipo)}}>{detalhe.titulo}</h3>
+              </div>
               <button onClick={()=>setDetalhe(null)} style={{fontSize:20,color:'#7A6555'}}>✕</button>
             </div>
             <div className="modal-body">
-              <p style={{fontSize:14,color:'#2C1500',lineHeight:1.7,marginBottom:12}}>{detalhe.mensagem}</p>
-              <div style={{fontSize:12,color:'#A89080'}}>{new Date(detalhe.created_at).toLocaleString('pt-BR')}</div>
-              <div style={{marginTop:8}}><span style={{background:detalhe.tipo==='success'?'#D4EDDA':detalhe.tipo==='warning'?'#FEF3C7':'#E8C9A8',color:detalhe.tipo==='success'?'#2D7A3A':detalhe.tipo==='warning'?'#92600A':'#3D1F00',padding:'3px 10px',borderRadius:20,fontSize:11,fontWeight:600}}>{detalhe.tipo||'info'}</span></div>
+              {/* Quebrar mensagem em partes para melhor leitura */}
+              {parseMensagem(detalhe.mensagem).partes.length>0
+                ?<div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:16}}>
+                  {parseMensagem(detalhe.mensagem).partes.map((p,i)=>{
+                    const [label,valor]=p.includes(':')?p.split(':',2):['',p];
+                    return(
+                      <div key={i} style={{background:'#FAF3EC',borderRadius:8,padding:'8px 12px'}}>
+                        {label&&<div style={{fontSize:10,fontWeight:700,color:'#7A6555',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}}>{label.trim()}</div>}
+                        <div style={{fontSize:14,color:'#2C1500',fontWeight:valor?500:400}}>{valor?valor.trim():p}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                :<p style={{fontSize:14,color:'#2C1500',lineHeight:1.7,marginBottom:16}}>{detalhe.mensagem}</p>
+              }
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <span style={{background:bg(detalhe.tipo),color:cor(detalhe.tipo),padding:'3px 10px',borderRadius:20,fontSize:11,fontWeight:600}}>{detalhe.tipo==='success'?'Sucesso':detalhe.tipo==='warning'?'Atenção':'Info'}</span>
+                <span style={{fontSize:12,color:'#A89080'}}>{new Date(detalhe.created_at).toLocaleString('pt-BR')}</span>
+              </div>
             </div>
             <div className="modal-footer"><button className="btn btn-primary" onClick={()=>setDetalhe(null)}>Fechar</button></div>
           </div>
@@ -1189,7 +1239,14 @@ function FuncDetalheModal({func,onClose,reload,clientesFunc}){
   const checklistFeitas=(func.checklist||[]).filter(c=>c.concluido);
   const concluidas=checklistHoje.filter(c=>c.concluido).length;
   const [novaTask,setNovaTask]=useState('');const [verFeitas,setVerFeitas]=useState(false);
-  async function toggleTask(item){const now=item.concluido?null:new Date().toISOString();await sb.from('checklist_items').update({concluido:!item.concluido,concluido_em:now}).eq('id',item.id);reload();}
+  async function toggleTask(item){
+    const now=item.concluido?null:new Date().toISOString();
+    await sb.from('checklist_items').update({concluido:!item.concluido,concluido_em:now}).eq('id',item.id);
+    if(!item.concluido){
+      await sb.from('notificacoes').insert({titulo:`✓ Tarefa concluída — ${func.nome}`,mensagem:`${func.nome} (${func.cargo||'Colaborador'}) concluiu: "${item.titulo}" às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`,tipo:'success'});
+    }
+    reload();
+  }
   async function deleteTask(id){await sb.from('checklist_items').delete().eq('id',id);reload();}
   async function addTask(){if(!novaTask.trim())return;await sb.from('checklist_items').insert({funcionario_id:func.id,titulo:novaTask,data_tarefa:hoje});setNovaTask('');reload();}
   return(
