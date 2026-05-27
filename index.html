@@ -204,6 +204,8 @@ function AprovacaoPage({token}){
       const {data:l}=await sb.from('aprovacao_lotes').select('*').eq('token',token).single();
       if(!l){setLoading(false);return;}setLote(l);
       const {data:lcs}=await sb.from('aprovacao_lote_cards').select('*,card:cards(*,midias:card_midias(*))').eq('lote_id',l.id);
+      // Buscar nome do cliente
+      if(l.cliente_id){const {data:cl}=await sb.from('clientes').select('nome,cor').eq('id',l.cliente_id).single();if(cl)setLote({...l,nome_cliente:cl.nome,cor_cliente:cl.cor});}
       setCards(lcs||[]);setLoading(false);
     }load();
   },[token]);
@@ -237,8 +239,8 @@ function AprovacaoPage({token}){
                 {/* Preview estilo Instagram */}
                 <div style={{background:'#fff',border:'1px solid #dbdbdb',borderRadius:12,overflow:'hidden',marginBottom:14}}>
                   <div style={{padding:'10px 12px',display:'flex',alignItems:'center',gap:8,borderBottom:'1px solid #efefef'}}>
-                    <div style={{width:32,height:32,borderRadius:'50%',background:'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:13}}>L</div>
-                    <div><div style={{fontWeight:600,fontSize:13,color:'#000'}}>lumetmarketing</div><div style={{fontSize:11,color:'#888'}}>Patrocinado</div></div>
+                    <div style={{width:32,height:32,borderRadius:'50%',background:'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:13}}>{(lote?.nome_cliente||'L').charAt(0).toUpperCase()}</div>
+                    <div><div style={{fontWeight:600,fontSize:13,color:'#000'}}>{lote?.nome_cliente||card?.nome_cliente||'Conta'}</div><div style={{fontSize:11,color:'#888'}}>Patrocinado</div></div>
                     <span style={{marginLeft:'auto',fontSize:18,color:'#888'}}>•••</span>
                   </div>
                   {m0&&m0.tipo!=='video'?<img src={m0.url} alt="arte" style={{width:'100%',maxHeight:400,objectFit:'cover',display:'block'}}/>:
@@ -250,7 +252,7 @@ function AprovacaoPage({token}){
                     <span>🤍</span><span>💬</span><span>✈️</span><span style={{marginLeft:'auto'}}>🔖</span>
                   </div>
                   <div style={{padding:'0 12px 4px',fontWeight:700,fontSize:13,color:'#000'}}>1.247 curtidas</div>
-                  {card?.legenda&&<div style={{padding:'4px 12px 8px',fontSize:13,color:'#000',lineHeight:1.5}}><strong style={{marginRight:6}}>lumetmarketing</strong>{card.legenda}</div>}
+                  {card?.legenda&&<div style={{padding:'4px 12px 8px',fontSize:13,color:'#000',lineHeight:1.5}}><strong style={{marginRight:6}}>{lote?.nome_cliente||'Conta'}</strong>{card.legenda}</div>}
                   {card?.data_publicacao&&<div style={{padding:'0 12px 12px',fontSize:11,color:'#999',textTransform:'uppercase'}}>{new Date(card.data_publicacao).toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}</div>}
                 </div>
                 {lc.status==='pendente'&&(reprovandoId===lc.id?(
@@ -964,14 +966,136 @@ function CalendarioPage({cards,clientes}){
   );
 }
 
-// ── EQUIPE: email de boas-vindas + notificação da equipe ──
-function EquipePage({funcionarios,reload}){
-  const [showModal,setShowModal]=useState(false);const [editFunc,setEditFunc]=useState(null);
+// ── GRÁFICO PIZZA ──
+function PizzaChart({data}){
+  const total=data.reduce((s,d)=>s+d.val,0);
+  if(total===0)return<div style={{textAlign:'center',color:'#A89080',fontSize:13,padding:20}}>Sem dados de tarefas ainda</div>;
+  let angle=0;
+  const slices=data.map(d=>{const pct=d.val/total;const start=angle;angle+=pct*360;return{...d,start,pct};});
+  function polar(deg,r){const rad=(deg-90)*Math.PI/180;return{x:100+r*Math.cos(rad),y:100+r*Math.sin(rad)};}
+  function arc(s,e,r=78){
+    if(e-s>=360)e=359.99;
+    const a=polar(s,r);const b=polar(e,r);const lg=e-s>180?1:0;
+    return`M100,100 L${a.x},${a.y} A${r},${r} 0 ${lg},1 ${b.x},${b.y} Z`;
+  }
+  return(
+    <div style={{display:'flex',gap:24,alignItems:'center',flexWrap:'wrap',justifyContent:'center'}}>
+      <svg viewBox="0 0 200 200" width={170} height={170}>
+        {slices.map((s,i)=><path key={i} d={arc(s.start,s.start+s.pct*360)} fill={s.color} stroke="#fff" strokeWidth={2.5}/>)}
+        <circle cx={100} cy={100} r={42} fill="#fff"/>
+        <text x={100} y={96} textAnchor="middle" fontSize={13} fontWeight={700} fill="#3D1F00">{total}</text>
+        <text x={100} y={111} textAnchor="middle" fontSize={10} fill="#7A6555">tarefas</text>
+      </svg>
+      <div>
+        {data.map((d,i)=>(
+          <div key={i} style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
+            <div style={{width:14,height:14,borderRadius:4,background:d.color,flexShrink:0}}/>
+            <span style={{fontSize:13,color:'#2C1500',flex:1,minWidth:120}}>{d.label}</span>
+            <span style={{fontSize:14,fontWeight:700,color:d.color,minWidth:28,textAlign:'right'}}>{d.val}</span>
+            <span style={{fontSize:11,color:'#A89080',minWidth:36}}>({total?Math.round(d.val/total*100):0}%)</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── EQUIPE: página completa com gráfico, empresas, histórico ──
+function EquipePage({funcionarios,reload,clientes}){
+  const [showModal,setShowModal]=useState(false);
+  const [editFunc,setEditFunc]=useState(null);
+  const [funcDetalhe,setFuncDetalhe]=useState(null);
+  const hoje=new Date().toISOString().split('T')[0];
+
+  const totalConc=funcionarios.reduce((s,f)=>(f.checklist||[]).filter(c=>c.concluido).length+s,0);
+  const totalAtras=funcionarios.reduce((s,f)=>(f.checklist||[]).filter(c=>c.data_tarefa<hoje&&!c.concluido).length+s,0);
+  const totalPend=funcionarios.reduce((s,f)=>(f.checklist||[]).filter(c=>c.data_tarefa===hoje&&!c.concluido).length+s,0);
+  const totalHoje=funcionarios.reduce((s,f)=>(f.checklist||[]).filter(c=>c.data_tarefa===hoje).length+s,0);
+
+  const pizzaData=[
+    {label:'Concluídas',val:totalConc,color:'#2D7A3A'},
+    {label:'Pendentes hoje',val:totalPend,color:'#92600A'},
+    {label:'Em atraso',val:totalAtras,color:'#B91C1C'},
+  ];
+
+  function getClientesDoFunc(fid){return(clientes||[]).filter(c=>c.responsavel_id===fid);}
+
   return(
     <div>
-      <div className="page-header"><div><div className="page-title">Equipe</div><div className="page-sub">{funcionarios.length} colaboradores</div></div><button className="btn btn-primary" onClick={()=>{setEditFunc(null);setShowModal(true);}}>+ Novo funcionário</button></div>
-      <div className="grid-2">{funcionarios.map(f=><div key={f.id} className="func-card" onDoubleClick={()=>{setEditFunc(f);setShowModal(true);}} style={{cursor:'pointer'}} title="Duplo clique para abrir"><div style={{display:'flex',gap:12,alignItems:'center',marginBottom:12}}><div className="func-avatar">{f.nome.charAt(0)}</div><div style={{flex:1}}><div style={{fontWeight:600,color:'#2C1500'}}>{f.nome}</div><div style={{fontSize:13,color:'#7A6555'}}>{f.cargo}</div><div style={{fontSize:12,color:'#A89080'}}>{f.email}</div></div><button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();setEditFunc(f);setShowModal(true);}}>Editar</button></div>{f.observacao?.[0]?.observacao&&<div style={{background:'#FEF3C7',borderRadius:8,padding:10,fontSize:13,color:'#92600A'}}>📝 {f.observacao[0].observacao}</div>}<div style={{fontSize:11,color:'#C8956C',marginTop:8,textAlign:'center'}}>↕ duplo clique para abrir</div></div>)}</div>
+      <div className="page-header">
+        <div><div className="page-title">Equipe</div><div className="page-sub">{funcionarios.length} colaboradores — duplo clique para abrir</div></div>
+        <button className="btn btn-primary" onClick={()=>{setEditFunc(null);setShowModal(true);}}>+ Novo funcionário</button>
+      </div>
+
+      {/* Gráfico pizza + resumo */}
+      <div className="card" style={{marginBottom:20}}>
+        <div className="section-title">Desempenho geral da equipe</div>
+        <PizzaChart data={pizzaData}/>
+        <div className="grid-4" style={{marginTop:20}}>
+          {[{v:totalConc,l:'Concluídas',c:'#2D7A3A'},{v:totalHoje,l:'Tarefas hoje',c:'#92600A'},{v:totalAtras,l:'Em atraso',c:'#B91C1C'},{v:funcionarios.length,l:'Colaboradores',c:'#3D1F00'}].map((s,i)=>(
+            <div key={i} style={{textAlign:'center',background:'#FAF3EC',borderRadius:10,padding:'12px 8px',border:'1px solid #E5D5C5'}}>
+              <div style={{fontSize:26,fontWeight:700,color:s.c}}>{s.v}</div>
+              <div style={{fontSize:11,color:'#7A6555',marginTop:2}}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Cards individuais */}
+      <div className="grid-2">
+        {funcionarios.map(f=>{
+          const taskHoje=(f.checklist||[]).filter(c=>c.data_tarefa===hoje);
+          const taskConc=(f.checklist||[]).filter(c=>c.concluido);
+          const taskAtras=(f.checklist||[]).filter(c=>c.data_tarefa<hoje&&!c.concluido);
+          const taskPend=taskHoje.filter(c=>!c.concluido);
+          const clientesFunc=getClientesDoFunc(f.id);
+          return(
+            <div key={f.id} className="func-card" onDoubleClick={()=>setFuncDetalhe(f)} style={{cursor:'pointer'}} title="Duplo clique para ver detalhes">
+              <div style={{display:'flex',gap:12,alignItems:'center',marginBottom:12}}>
+                <div className="func-avatar">{f.nome.charAt(0)}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,color:'#2C1500',fontSize:15}}>{f.nome}</div>
+                  <div style={{fontSize:13,color:'#7A6555'}}>{f.cargo||'Colaborador'}</div>
+                  {f.email&&<div style={{fontSize:11,color:'#A89080'}}>{f.email}</div>}
+                </div>
+                <button className="btn btn-outline btn-sm" onClick={e=>{e.stopPropagation();setEditFunc(f);setShowModal(true);}}>Editar</button>
+              </div>
+
+              {/* Mini stats */}
+              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6,marginBottom:12}}>
+                {[{v:taskConc.length,l:'Feitas',c:'#2D7A3A'},{v:taskPend.length,l:'Hoje',c:'#92600A'},{v:taskAtras.length,l:'Atraso',c:'#B91C1C'},{v:taskHoje.length,l:'Total',c:'#3D1F00'}].map((s,i)=>(
+                  <div key={i} style={{textAlign:'center',background:'#FAF3EC',borderRadius:8,padding:'6px 4px',border:'1px solid #E5D5C5'}}>
+                    <div style={{fontSize:16,fontWeight:700,color:s.c}}>{s.v}</div>
+                    <div style={{fontSize:9,color:'#7A6555'}}>{s.l}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Empresas */}
+              <div style={{marginBottom:8}}>
+                <div style={{fontSize:10,fontWeight:700,color:'#7A6555',marginBottom:5,textTransform:'uppercase',letterSpacing:'.05em'}}>Empresas sob responsabilidade</div>
+                {clientesFunc.length===0
+                  ?<div style={{fontSize:12,color:'#A89080',fontStyle:'italic'}}>Nenhuma empresa atribuída</div>
+                  :<div style={{display:'flex',flexWrap:'wrap',gap:5}}>
+                    {clientesFunc.map(c=><div key={c.id} style={{display:'flex',alignItems:'center',gap:4,background:(c.cor||'#8B5A2B')+'18',border:`1px solid ${c.cor||'#8B5A2B'}44`,borderRadius:8,padding:'3px 8px'}}>
+                      <div style={{width:7,height:7,borderRadius:'50%',background:c.cor||'#8B5A2B',flexShrink:0}}/>
+                      <span style={{fontSize:11,color:c.cor||'#8B5A2B',fontWeight:600}}>{c.nome}</span>
+                      {c.segmento&&<span style={{fontSize:10,color:'#A89080'}}>· {c.segmento}</span>}
+                    </div>)}
+                  </div>
+                }
+              </div>
+
+              {taskAtras.length>0&&<div style={{background:'#FEE2E2',borderRadius:8,padding:'5px 10px',fontSize:12,color:'#B91C1C',fontWeight:600,marginBottom:6}}>⚠️ {taskAtras.length} tarefa(s) em atraso</div>}
+              {f.observacao?.[0]?.observacao&&<div style={{background:'#FEF3C7',borderRadius:8,padding:8,fontSize:12,color:'#92600A'}}>📝 {f.observacao[0].observacao}</div>}
+              <div style={{fontSize:10,color:'#C8956C',marginTop:8,textAlign:'center'}}>↕ duplo clique para detalhes completos</div>
+            </div>
+          );
+        })}
+      </div>
+
       {showModal&&<FuncModal func={editFunc} onClose={()=>{setShowModal(false);setEditFunc(null);}} reload={reload}/>}
+      {funcDetalhe&&<FuncDetalheModal func={funcDetalhe} onClose={()=>setFuncDetalhe(null)} reload={reload} clientesFunc={getClientesDoFunc(funcDetalhe.id)}/>}
     </div>
   );
 }
