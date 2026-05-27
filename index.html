@@ -233,12 +233,26 @@ function AprovacaoPage({token}){
             const card=lc.card;const midias=card?.midias||[];const m0=midias[0];
             return(
               <div key={lc.id} style={{marginBottom:28,paddingBottom:28,borderBottom:i<cards.length-1?'1px solid #E5D5C5':'none'}}>
-                <div style={{fontSize:12,color:'#7A6555',marginBottom:6}}>Conteúdo {i+1} de {cards.length}</div>
-                <div style={{fontSize:16,fontWeight:600,color:'#2C1500',marginBottom:12}}>{card?.nome}</div>
-                {m0&&(m0.tipo==='video'?<video controls style={{width:'100%',borderRadius:12,marginBottom:12}}><source src={m0.url}/></video>:<img src={m0.url} alt="arte" style={{width:'100%',maxHeight:320,objectFit:'contain',borderRadius:12,background:'#FAF3EC',marginBottom:12}}/>)}
-                {midias.length>1&&<div style={{fontSize:12,color:'#7A6555',marginBottom:8}}>+{midias.length-1} mídia(s) adicional(is)</div>}
-                {card?.legenda&&<p style={{fontSize:14,color:'#2C1500',background:'#FAF3EC',padding:12,borderRadius:8,marginBottom:12,lineHeight:1.7}}>{card.legenda}</p>}
-                {card?.data_publicacao&&<div style={{fontSize:12,color:'#7A6555',marginBottom:12}}>{new Date(card.data_publicacao).toLocaleDateString('pt-BR')}</div>}
+                <div style={{fontSize:12,color:'#7A6555',marginBottom:10}}>Conteúdo {i+1} de {cards.length}</div>
+                {/* Preview estilo Instagram */}
+                <div style={{background:'#fff',border:'1px solid #dbdbdb',borderRadius:12,overflow:'hidden',marginBottom:14}}>
+                  <div style={{padding:'10px 12px',display:'flex',alignItems:'center',gap:8,borderBottom:'1px solid #efefef'}}>
+                    <div style={{width:32,height:32,borderRadius:'50%',background:'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:13}}>L</div>
+                    <div><div style={{fontWeight:600,fontSize:13,color:'#000'}}>lumetmarketing</div><div style={{fontSize:11,color:'#888'}}>Patrocinado</div></div>
+                    <span style={{marginLeft:'auto',fontSize:18,color:'#888'}}>•••</span>
+                  </div>
+                  {m0&&m0.tipo!=='video'?<img src={m0.url} alt="arte" style={{width:'100%',maxHeight:400,objectFit:'cover',display:'block'}}/>:
+                   m0&&m0.tipo==='video'?<video controls style={{width:'100%',display:'block'}}><source src={m0.url}/></video>:
+                   <div style={{width:'100%',height:200,background:'#fafafa',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:6}}><span style={{fontSize:40}}>🖼</span><span style={{fontSize:12,color:'#999'}}>Sem imagem</span></div>
+                  }
+                  {midias.length>1&&<div style={{background:'#f0f0f0',padding:'6px 12px',fontSize:11,color:'#888'}}>+{midias.length-1} imagem(ns) adicional(is)</div>}
+                  <div style={{padding:'10px 12px',display:'flex',gap:14,fontSize:22}}>
+                    <span>🤍</span><span>💬</span><span>✈️</span><span style={{marginLeft:'auto'}}>🔖</span>
+                  </div>
+                  <div style={{padding:'0 12px 4px',fontWeight:700,fontSize:13,color:'#000'}}>1.247 curtidas</div>
+                  {card?.legenda&&<div style={{padding:'4px 12px 8px',fontSize:13,color:'#000',lineHeight:1.5}}><strong style={{marginRight:6}}>lumetmarketing</strong>{card.legenda}</div>}
+                  {card?.data_publicacao&&<div style={{padding:'0 12px 12px',fontSize:11,color:'#999',textTransform:'uppercase'}}>{new Date(card.data_publicacao).toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}</div>}
+                </div>
                 {lc.status==='pendente'&&(reprovandoId===lc.id?(
                   <div>
                     <textarea placeholder="Descreva o motivo..." value={obs} onChange={e=>setObs(e.target.value)} style={{marginBottom:12}}/>
@@ -293,7 +307,7 @@ function App(){
         {page==='clientes'&&<ClientesPage clientes={clientes} navTo={navTo} reload={loadClientes} funcionarios={funcionarios}/>}
         {page==='cliente'&&currentCliente&&<ClienteDetalhe cliente={currentCliente} cards={cards.filter(c=>c.cliente_id===clienteId)} funcionarios={funcionarios} reload={loadAll} navTo={navTo}/>}
         {page==='calendario'&&<CalendarioPage cards={cards} clientes={clientes}/>}
-        {page==='equipe'&&<EquipePage funcionarios={funcionarios} reload={loadFuncs}/>}
+        {page==='equipe'&&<EquipePage funcionarios={funcionarios} reload={loadFuncs} clientes={clientes}/>}
         {page==='processos'&&<ProcessosPage/>}
       </div>
     </div>
@@ -334,11 +348,14 @@ function Dashboard({funcionarios,clientes,cards,notifs,navTo,reload}){
           </div>
         ))}
       </div>
-      <div className="section-title">Equipe — checklist do dia</div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+        <div className="section-title" style={{marginBottom:0}}>Equipe — atividades</div>
+        <div style={{fontSize:12,color:'#7A6555'}}>Duplo clique para abrir detalhes</div>
+      </div>
       <div className="grid-2" style={{marginBottom:24}}>{funcionarios.map(f=><FuncChecklistCard key={f.id} func={f} reload={reload} onDblClick={()=>{setFuncDetalhe(f);}}/>)}</div>
       <div className="section-title">Notificações recentes</div>
       <div className="card">{notifs.length===0?<p style={{color:'#7A6555',fontSize:14}}>Nenhuma notificação ainda.</p>:notifs.slice(0,5).map(n=><div key={n.id} style={{display:'flex',gap:12,padding:'10px 0',borderBottom:'1px solid #E5D5C5',alignItems:'flex-start'}}><div style={{width:34,height:34,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:n.tipo==='success'?'#D4EDDA':n.tipo==='warning'?'#FEF3C7':'#E8C9A8',fontSize:16,flexShrink:0}}>{n.tipo==='success'?'✓':n.tipo==='warning'?'!':'ℹ'}</div><div><div style={{fontSize:14,fontWeight:600,color:'#2C1500'}}>{n.titulo}</div><div style={{fontSize:13,color:'#7A6555'}}>{n.mensagem}</div><div style={{fontSize:11,color:'#A89080'}}>{new Date(n.created_at).toLocaleString('pt-BR')}</div></div></div>)}</div>
-      {funcDetalhe&&<FuncDetalheModal func={funcDetalhe} onClose={()=>setFuncDetalhe(null)} reload={reload}/>}
+      {funcDetalhe&&<FuncDetalheModal func={funcDetalhe} onClose={()=>setFuncDetalhe(null)} reload={reload} clientesFunc={[]}/>}
     </div>
   );
 }
@@ -482,9 +499,11 @@ function ProcessoModal({processo,onClose,reload,totalProcessos}){
 function FuncChecklistCard({func,reload,onDblClick}){
   const [novaTask,setNovaTask]=useState('');const [editingId,setEditingId]=useState(null);const [editText,setEditText]=useState('');
   const [obs,setObs]=useState(func.observacao?.[0]?.observacao||'');const [addingObs,setAddingObs]=useState(false);const [verDias,setVerDias]=useState(false);
+  const [verFeitas,setVerFeitas]=useState(false);const [addingTask,setAddingTask]=useState(false);
   const hoje=new Date().toISOString().split('T')[0];
   const checklistHoje=(func.checklist||[]).filter(c=>c.data_tarefa===hoje);
   const checklistPassado=(func.checklist||[]).filter(c=>c.data_tarefa<hoje&&!c.concluido);
+  const checklistFeitas=(func.checklist||[]).filter(c=>c.concluido);
   const concluidas=checklistHoje.filter(c=>c.concluido).length;
   async function addTask(){if(!novaTask.trim())return;await sb.from('checklist_items').insert({funcionario_id:func.id,titulo:novaTask,data_tarefa:hoje});setNovaTask('');reload();}
   async function toggleTask(item){const now=item.concluido?null:new Date().toISOString();await sb.from('checklist_items').update({concluido:!item.concluido,concluido_em:now}).eq('id',item.id);reload();}
@@ -522,7 +541,30 @@ function FuncChecklistCard({func,reload,onDblClick}){
           )}
         </div>
       ))}</div>}
-      <div style={{display:'flex',gap:8,marginBottom:12}}><input placeholder="Nova tarefa de hoje..." value={novaTask} onChange={e=>setNovaTask(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addTask()} style={{flex:1,fontSize:13,padding:'7px 10px'}}/><button className="btn btn-primary btn-sm" onClick={addTask}>+</button></div>
+      {/* Tarefas concluídas histórico */}
+      {checklistFeitas.length>0&&<div style={{marginBottom:10}}>
+        <div style={{fontSize:12,fontWeight:600,color:'#2D7A3A',cursor:'pointer',display:'flex',justifyContent:'space-between',padding:'6px 0',borderTop:'1px solid #E5D5C5'}} onClick={()=>setVerFeitas(!verFeitas)}>
+          ✓ {checklistFeitas.length} concluída(s) {verFeitas?'▲':'▼'}
+        </div>
+        {verFeitas&&checklistFeitas.slice(0,10).map(item=>(
+          <div key={item.id} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0',opacity:.7}}>
+            <div className="checklist-check done" style={{flexShrink:0}}>✓</div>
+            <span style={{fontSize:12,color:'#A89080',textDecoration:'line-through',flex:1}}>{item.titulo}</span>
+            {item.concluido_em&&<span style={{fontSize:10,color:'#A89080'}}>{new Date(item.concluido_em).toLocaleDateString('pt-BR')}</span>}
+            <button onClick={()=>deleteTask(item.id)} style={{color:'#B91C1C',fontSize:11,padding:'0 3px',border:'none',background:'none',cursor:'pointer'}}>✕</button>
+          </div>
+        ))}
+      </div>}
+      {/* Adicionar nova tarefa */}
+      {addingTask?(
+        <div style={{display:'flex',gap:8,marginBottom:12}}>
+          <input placeholder="Nova tarefa..." value={novaTask} onChange={e=>setNovaTask(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addTask()} style={{flex:1,fontSize:13,padding:'7px 10px'}} autoFocus/>
+          <button className="btn btn-primary btn-sm" onClick={addTask}>+</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>setAddingTask(false)}>✕</button>
+        </div>
+      ):(
+        <button className="btn btn-outline btn-sm" style={{width:'100%',justifyContent:'center',marginBottom:12}} onClick={()=>setAddingTask(true)}>+ Nova tarefa</button>
+      )}
       {func.observacao?.[0]?.observacao&&!addingObs&&<div style={{background:'#FEF3C7',borderRadius:8,padding:10,marginBottom:8,fontSize:13,color:'#92600A',cursor:'pointer'}} onClick={()=>setAddingObs(true)}>📝 {func.observacao[0].observacao}</div>}
       {addingObs?(<div><textarea placeholder="Observação de melhoria..." value={obs} onChange={e=>setObs(e.target.value)} style={{marginBottom:8,fontSize:13}}/><div style={{display:'flex',gap:8}}><button className="btn btn-primary btn-sm" onClick={salvarObs}>Salvar</button><button className="btn btn-outline btn-sm" onClick={()=>setAddingObs(false)}>Cancelar</button></div></div>):(<button className="btn btn-outline btn-sm" style={{width:'100%',justifyContent:'center'}} onClick={()=>setAddingObs(true)}>{func.observacao?.[0]?.observacao?'Editar observação':'+ Observação de melhoria'}</button>)}
     </div>
@@ -1016,31 +1058,53 @@ function NotifPanel({notifs,onClose}){
 }
 
 // ── FUNC DETALHE MODAL: abre no dashboard ao clicar 2x ──
-function FuncDetalheModal({func,onClose,reload}){
+function FuncDetalheModal({func,onClose,reload,clientesFunc}){
   const hoje=new Date().toISOString().split('T')[0];
   const checklistHoje=(func.checklist||[]).filter(c=>c.data_tarefa===hoje);
   const checklistPassado=(func.checklist||[]).filter(c=>c.data_tarefa<hoje&&!c.concluido);
+  const checklistFeitas=(func.checklist||[]).filter(c=>c.concluido);
   const concluidas=checklistHoje.filter(c=>c.concluido).length;
+  const [novaTask,setNovaTask]=useState('');const [verFeitas,setVerFeitas]=useState(false);
   async function toggleTask(item){const now=item.concluido?null:new Date().toISOString();await sb.from('checklist_items').update({concluido:!item.concluido,concluido_em:now}).eq('id',item.id);reload();}
   async function deleteTask(id){await sb.from('checklist_items').delete().eq('id',id);reload();}
+  async function addTask(){if(!novaTask.trim())return;await sb.from('checklist_items').insert({funcionario_id:func.id,titulo:novaTask,data_tarefa:hoje});setNovaTask('');reload();}
   return(
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="modal" style={{maxWidth:520}}>
+      <div className="modal" style={{maxWidth:560}}>
         <div className="modal-header">
           <div style={{display:'flex',gap:12,alignItems:'center'}}>
             <div className="func-avatar">{func.nome.charAt(0)}</div>
-            <div><div style={{fontSize:18,fontWeight:700,color:'#2C1500'}}>{func.nome}</div><div style={{fontSize:13,color:'#7A6555'}}>{func.cargo||'Colaborador'}</div></div>
+            <div>
+              <div style={{fontSize:18,fontWeight:700,color:'#2C1500'}}>{func.nome}</div>
+              <div style={{fontSize:13,color:'#7A6555'}}>{func.cargo||'Colaborador'}</div>
+              {func.email&&<div style={{fontSize:12,color:'#A89080'}}>{func.email}</div>}
+            </div>
           </div>
           <button onClick={onClose} style={{fontSize:20,color:'#7A6555'}}>✕</button>
         </div>
         <div className="modal-body">
-          {func.email&&<div style={{background:'#FAF3EC',borderRadius:8,padding:10,marginBottom:12,fontSize:13,color:'#3D1F00'}}>✉️ {func.email}</div>}
+          {/* Empresas */}
+          {clientesFunc&&clientesFunc.length>0&&<div style={{marginBottom:16}}>
+            <div className="section-title" style={{marginBottom:8}}>Empresas sob responsabilidade</div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+              {clientesFunc.map(c=><div key={c.id} style={{display:'flex',alignItems:'center',gap:6,background:c.cor+'22',border:`1.5px solid ${c.cor}55`,borderRadius:10,padding:'6px 12px'}}>
+                <div style={{width:10,height:10,borderRadius:'50%',background:c.cor}}/><span style={{fontSize:13,color:c.cor,fontWeight:600}}>{c.nome}</span>
+                {c.segmento&&<span style={{fontSize:11,color:'#7A6555'}}>({c.segmento})</span>}
+              </div>)}
+            </div>
+          </div>}
           {func.observacao?.[0]?.observacao&&<div style={{background:'#FEF3C7',borderRadius:8,padding:10,marginBottom:12,fontSize:13,color:'#92600A'}}>📝 {func.observacao[0].observacao}</div>}
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-            <div className="section-title" style={{marginBottom:0}}>Checklist de hoje</div>
-            <div style={{background:'#EDD9C0',borderRadius:8,padding:'4px 10px',fontSize:14,fontWeight:700,color:'#3D1F00'}}>{concluidas}/{checklistHoje.length} ✓</div>
+          {/* Mini stats */}
+          <div className="grid-4" style={{marginBottom:16}}>
+            {[{v:checklistFeitas.length,l:'Concluídas',c:'#2D7A3A'},{v:checklistHoje.filter(x=>!x.concluido).length,l:'Pendentes',c:'#92600A'},{v:checklistPassado.length,l:'Atrasadas',c:'#B91C1C'},{v:checklistHoje.length,l:'Hoje total',c:'#3D1F00'}].map((s,i)=>(
+              <div key={i} style={{textAlign:'center',background:'#FAF3EC',borderRadius:8,padding:'8px 4px'}}>
+                <div style={{fontSize:20,fontWeight:700,color:s.c}}>{s.v}</div>
+                <div style={{fontSize:10,color:'#7A6555'}}>{s.l}</div>
+              </div>
+            ))}
           </div>
-          {checklistPassado.length>0&&<div style={{background:'#FEE2E2',borderRadius:8,padding:'8px 10px',marginBottom:10}}>
+          {/* Atraso */}
+          {checklistPassado.length>0&&<div style={{background:'#FEE2E2',borderRadius:8,padding:'8px 10px',marginBottom:12}}>
             <div style={{fontSize:12,fontWeight:600,color:'#B91C1C',marginBottom:6}}>⚠️ {checklistPassado.length} tarefa(s) em atraso</div>
             {checklistPassado.map(item=><div key={item.id} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0',borderTop:'1px solid #FCA5A5'}}>
               <span style={{fontSize:12,color:'#B91C1C',flex:1}}>{item.titulo} <span style={{color:'#A89080',fontSize:10}}>({new Date(item.data_tarefa+'T12:00').toLocaleDateString('pt-BR')})</span></span>
@@ -1048,15 +1112,39 @@ function FuncDetalheModal({func,onClose,reload}){
               <button onClick={()=>deleteTask(item.id)} style={{background:'#FEE2E2',color:'#B91C1C',border:'none',borderRadius:6,padding:'2px 8px',fontSize:11,cursor:'pointer'}}>✕</button>
             </div>)}
           </div>}
-          {checklistHoje.length===0&&checklistPassado.length===0&&<p style={{color:'#A89080',fontSize:14,textAlign:'center',padding:'16px 0'}}>Nenhuma tarefa para hoje.</p>}
+          {/* Checklist hoje */}
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+            <div className="section-title" style={{marginBottom:0}}>Tarefas de hoje</div>
+            <div style={{background:'#EDD9C0',borderRadius:8,padding:'3px 10px',fontSize:13,fontWeight:700,color:'#3D1F00'}}>{concluidas}/{checklistHoje.length} ✓</div>
+          </div>
+          {checklistHoje.length===0&&checklistPassado.length===0&&<p style={{color:'#A89080',fontSize:13,padding:'8px 0'}}>Nenhuma tarefa para hoje.</p>}
           {checklistHoje.map(item=>(
             <div key={item.id} className="checklist-item">
               <div className={`checklist-check${item.concluido?' done':''}`} onClick={()=>toggleTask(item)}>{item.concluido&&'✓'}</div>
               <span style={{fontSize:13,color:item.concluido?'#A89080':'#2C1500',textDecoration:item.concluido?'line-through':'none',flex:1}}>{item.titulo}</span>
-              {item.concluido_em&&<span style={{fontSize:10,color:'#A89080'}}>{new Date(item.concluido_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>}
+              {item.concluido_em&&<span style={{fontSize:10,color:'#A89080'}}>{new Date(item.concluido_em).toLocaleDateString('pt-BR')}</span>}
               <button onClick={()=>deleteTask(item.id)} style={{color:'#B91C1C',fontSize:12,padding:'0 4px',border:'none',background:'none',cursor:'pointer'}}>✕</button>
             </div>
           ))}
+          {/* Adicionar tarefa */}
+          <div style={{display:'flex',gap:8,marginTop:12}}>
+            <input placeholder="Nova tarefa de hoje..." value={novaTask} onChange={e=>setNovaTask(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addTask()} style={{flex:1,fontSize:13,padding:'7px 10px'}}/>
+            <button className="btn btn-primary btn-sm" onClick={addTask}>+</button>
+          </div>
+          {/* Histórico feitas */}
+          {checklistFeitas.length>0&&<div style={{marginTop:14}}>
+            <div style={{fontSize:12,fontWeight:600,color:'#2D7A3A',cursor:'pointer',display:'flex',justifyContent:'space-between',padding:'6px 0',borderTop:'2px solid #E5D5C5'}} onClick={()=>setVerFeitas(!verFeitas)}>
+              ✓ Histórico de concluídas ({checklistFeitas.length}) {verFeitas?'▲':'▼'}
+            </div>
+            {verFeitas&&<div style={{maxHeight:200,overflowY:'auto'}}>
+              {checklistFeitas.map(item=><div key={item.id} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0',borderBottom:'1px solid #F0E8E0'}}>
+                <div className="checklist-check done" style={{flexShrink:0,width:14,height:14,fontSize:9}}>✓</div>
+                <span style={{fontSize:12,color:'#A89080',textDecoration:'line-through',flex:1}}>{item.titulo}</span>
+                {item.concluido_em&&<span style={{fontSize:10,color:'#C8956C'}}>{new Date(item.concluido_em).toLocaleDateString('pt-BR')} {new Date(item.concluido_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>}
+                {item.data_tarefa&&item.concluido_em&&item.data_tarefa<item.concluido_em.split('T')[0]&&<span style={{fontSize:10,color:'#B91C1C',fontWeight:600}}>atrasada</span>}
+              </div>)}
+            </div>}
+          </div>}
         </div>
         <div className="modal-footer"><button className="btn btn-outline" onClick={onClose}>Fechar</button></div>
       </div>
